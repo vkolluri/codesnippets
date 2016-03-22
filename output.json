@@ -1,5 +1,18 @@
-{
-  "$id": "Jane Doe",
-  "Name": "Jane Doe",
-  "PhoneNumber": "(555)555-5555"
-}
+[
+  {
+    "$id": "Jane Doe",
+    "Name": "Jane Doe",
+    "PhoneNumber": "(555)555-5555",
+    "Partner": {
+      "$id": "John Doe",
+      "Name": "John Doe",
+      "PhoneNumber": "(555)555-5555",
+      "Partner": {
+        "$ref": "Jane Doe"
+      }
+    }
+  },
+  {
+    "$ref": "John Doe",
+  }
+]
