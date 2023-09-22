@@ -1,0 +1,228 @@
+using Autofac;
+using Newtonsoft.Json.Serialization;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Json.Serialization.NewtonsoftJson;
+using Raven.TestDriver;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using Xunit;
+
+namespace Tests.Ravendb.Indexes
+{
+    public class JSONReferenceInIndexTest : RavenTestDriver
+    {
+        protected override void PreInitialize(IDocumentStore documentStore)
+        {
+            documentStore.Conventions.Serialization = new NewtonsoftJsonSerializationConventions()
+            {
+                CustomizeJsonSerializer = serializer =>
+                {
+                    serializer.ContractResolver = new ContractResolver(serializer.ContractResolver);
+                    serializer.PreserveReferencesHandling = Newtonsoft.Json.PreserveReferencesHandling.Objects;
+                    serializer.ReferenceResolver = new IdReferenceResolver(serializer.ReferenceResolver);
+                }
+            };
+        }
+
+        [Fact]
+        public void LoadDocumentWithRef()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new Person_ForSearch());
+                Person person; 
+                using (var session = store.OpenSession())
+                {
+                    var documentReferences = new List<IRef>()
+                    {
+                        new PersonRef()
+                        {
+                            RefId = Guid.NewGuid().ToString(),
+                            Name = "Test"
+                        }
+                    };
+
+                    person = new Person
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        Name = "Bob",
+                        Family = documentReferences.OfType<PersonRef>().ToList(),
+                        DocumentReferences = documentReferences,
+                    };
+
+                    session.Store(person);
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+                WaitForUserToContinueTheTest(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var load = session.Load<Person>(person.Id);
+                    Assert.NotNull(load.Family.FirstOrDefault());
+                    Assert.Equal("Test", load.Family.FirstOrDefault().Name);
+                }
+            }
+        }
+
+        [Fact]
+        public void LoadDocumentWithRefFromIndex()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.ExecuteIndex(new Person_ForSearch());
+                Person person;
+                using (var session = store.OpenSession())
+                {
+                    var documentReferences = new List<IRef>()
+                    {
+                        new PersonRef()
+                        {
+                            RefId = Guid.NewGuid().ToString(),
+                            Name = "Test"
+                        }
+                    };
+
+                    person = new Person
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        Name = "Bob",
+                        Family = documentReferences.OfType<PersonRef>().ToList(),
+                        DocumentReferences = documentReferences,
+                    };
+
+                    session.Store(person);
+                    session.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+                WaitForUserToContinueTheTest(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var documentQuery = session.Advanced.DocumentQuery<Person_ForSearch.Result, Person_ForSearch>()
+                                            .Search(e => e.Names, "Test").ToList();
+
+                    Assert.True(documentQuery.Any());
+                }
+            }
+        }
+
+        public class Person_ForSearch : AbstractIndexCreationTask<Person, Person_ForSearch.Result>
+        {
+            public class Result : Person
+            {
+                public string Query { get; set; }
+                public List<string> Names { get; set; }
+            }
+            public Person_ForSearch()
+            {
+                Map = persons => from person in persons
+                                 select new
+                                 {
+                                     person.Name,
+                                     Names = person.Family.Select(e => e.Name),
+                                     Query = AsJson(person).Select(x => x.Value),
+                                 };
+
+                Index(i => i.Query, FieldIndexing.Search);
+                Index(i => i.Names, FieldIndexing.Search);
+
+                Store(i => i.Names, FieldStorage.Yes);
+            }
+        }
+
+        public class Person
+        {
+            internal List<IRef> DocumentReferences { get; set; }
+            public string Id { get; set; }
+            public string Name { get; set; }
+            public List<PersonRef> Family { get; set; }
+        }
+
+        public class PersonRef : IRef
+        {
+            public string RefId { get; set; }
+            public string Name { get; set; }
+        }
+
+        public interface IRef
+        {
+            public string RefId { get; set; }
+        }
+
+        public class ContractResolver : IContractResolver
+        {
+            private readonly IContractResolver _contractResolver;
+
+            public ContractResolver(IContractResolver contractResolver)
+            {
+                _contractResolver = contractResolver;
+            }
+            public JsonContract ResolveContract(Type type)
+            {
+                var contract = _contractResolver.ResolveContract(type);
+                contract.IsReference = contract.IsReference ?? false;
+
+                if (type.IsAssignableTo<IRef>())
+                {
+                    contract.IsReference = true;
+                }
+                
+                return contract;
+            }
+        }
+        public class IdReferenceResolver : IReferenceResolver
+        {
+            private readonly IReferenceResolver _referenceResolver;
+
+            public IdReferenceResolver(IReferenceResolver referenceResolver)
+            {
+                _referenceResolver = referenceResolver;
+            }
+
+            public object ResolveReference(object context, string reference)
+            {
+                return _referenceResolver.ResolveReference(context, reference);
+            }
+
+            public string GetReference(object context, object value)
+            {
+                if (value is IRef)
+                {
+                    var r = value as IRef;
+                    // We need the original as the default implementation will see them as different and throw an exception!
+                    var original = _referenceResolver.ResolveReference(context, r.RefId.ToString());
+                    if (original == null)
+                    {
+                        _referenceResolver.AddReference(context, r.RefId.ToString(), value);
+                    }
+                    return _referenceResolver.GetReference(context, original ?? value);
+                }
+
+                return _referenceResolver.GetReference(context, value);
+            }
+
+            public bool IsReferenced(object context, object value)
+            {
+                if (value is IRef)
+                {
+                    var r = value as IRef;
+                    var original = _referenceResolver.ResolveReference(context, r.RefId.ToString());
+                    return original != null;
+                }
+                return _referenceResolver.IsReferenced(context, value);
+            }
+
+            public void AddReference(object context, string reference, object value)
+            {
+                _referenceResolver.AddReference(context, reference, value);
+            }
+        }
+    }
+}
