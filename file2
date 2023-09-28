@@ -1,4 +1,4 @@
- Function GenerateHtmlTable(data As Object) As String
+ Shared Function GenerateHtmlTable(data As Object) As String
         If data Is Nothing Then
             Return String.Empty
         End If
@@ -6,37 +6,34 @@
         Dim html As New StringBuilder()
         html.AppendLine("<table class='table table-bordered table-striped'>")
 
-        Dim jToken As JToken = TryCast(data, JToken)
+        If TypeOf data Is JObject Then
+            Dim jObject As JObject = DirectCast(data, JObject)
 
-        If jToken IsNot Nothing Then
-            If jToken.Type = JTokenType.Object Then
-                For Each [property] As JProperty In jToken.Children(Of JProperty)()
-                    html.AppendLine("<tr>")
-                    html.AppendLine($"<th>{[property].Name}</th>")
-                    html.AppendLine("<td>")
+            For Each [property] As JProperty In jObject.Properties()
+                html.AppendLine("<tr>")
+                html.AppendLine($"<th>{[property].Name}</th>")
+                html.AppendLine("<td>")
 
-                    Dim childHtml As String = GenerateHtmlTable([property].Value)
-                    html.AppendLine(childHtml)
+                Dim childHtml As String = GenerateHtmlTable([property].Value)
+                html.AppendLine(childHtml)
 
-                    html.AppendLine("</td>")
-                    html.AppendLine("</tr>")
-                Next
-            ElseIf jToken.Type = JTokenType.Array Then
-                For Each item As JToken In jToken
-                    html.AppendLine("<tr>")
-                    html.AppendLine("<th></th>")
-                    html.AppendLine("<td>")
+                html.AppendLine("</td>")
+                html.AppendLine("</tr>")
+            Next
+        ElseIf TypeOf data Is JArray Then
+            Dim jArray As JArray = DirectCast(data, JArray)
 
-                    Dim childHtml As String = GenerateHtmlTable(item)
-                    html.AppendLine(childHtml)
+            For Each item As JToken In jArray
+                html.AppendLine("<tr>")
+                html.AppendLine("<th></th>")
+                html.AppendLine("<td>")
 
-                    html.AppendLine("</td>")
-                    html.AppendLine("</tr>")
-                Next
-            Else
-                ' Display simple values
-                html.AppendLine($"<td>{jToken}</td>")
-            End If
+                Dim childHtml As String = GenerateHtmlTable(item)
+                html.AppendLine(childHtml)
+
+                html.AppendLine("</td>")
+                html.AppendLine("</tr>")
+            Next
         Else
             ' Display simple values
             html.AppendLine($"<td>{data}</td>")
@@ -45,3 +42,4 @@
         html.AppendLine("</table>")
         Return html.ToString()
     End Function
+End Class
