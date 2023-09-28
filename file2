@@ -3,20 +3,18 @@ Public Shared Function RenderToHtml(obj As T) As String
             Return String.Empty
         End If
 
-        Dim objectType As Type = GetType(T)
-        Dim properties As PropertyInfo() = objectType.GetProperties()
-
         Dim html As New StringBuilder()
-        html.Append("<table border='1'>")
+        html.AppendLine("<table border='1'>")
 
-        For Each property As PropertyInfo In properties
-            html.Append("<tr>")
+        ' Render properties and values
+        For Each property As PropertyInfo In GetType(T).GetProperties()
+            html.AppendLine("<tr>")
             html.AppendFormat("<th>{0}</th>", property.Name)
             html.AppendFormat("<td>{0}</td>", RenderPropertyValue(property.GetValue(obj)))
-            html.Append("</tr>")
+            html.AppendLine("</tr>")
         Next
 
-        html.Append("</table>")
+        html.AppendLine("</table>")
         Return html.ToString()
     End Function
 
@@ -25,27 +23,24 @@ Public Shared Function RenderToHtml(obj As T) As String
             Return String.Empty
         End If
 
-        Dim valueType As Type = value.GetType()
+        Dim html As New StringBuilder()
 
-        If valueType.IsPrimitive OrElse valueType = GetType(String) OrElse valueType.IsEnum Then
-            ' Render simple values directly
-            Return value.ToString()
-        ElseIf valueType.IsClass Then
-            ' Recursively render nested objects
-            Return RenderToHtml(value)
-        ElseIf valueType.IsGenericType AndAlso valueType.GetGenericTypeDefinition() = GetType(List(Of )) Then
-            ' Handle lists of objects
-            Dim list = DirectCast(value, IEnumerable(Of Object))
-            Dim listHtml As New StringBuilder("<ul>")
-
-            For Each item In list
-                listHtml.AppendFormat("<li>{0}</li>", RenderPropertyValue(item))
+        If value.GetType().IsClass AndAlso value.GetType() IsNot GetType(String) Then
+            ' Handle nested objects recursively
+            html.Append(RenderToHtml(value))
+        ElseIf TypeOf value Is System.Collections.IEnumerable Then
+            ' Handle collections (lists, arrays) of objects
+            html.AppendLine("<ul>")
+            For Each item As Object In DirectCast(value, System.Collections.IEnumerable)
+                html.AppendLine("<li>")
+                html.Append(RenderPropertyValue(item))
+                html.AppendLine("</li>")
             Next
-
-            listHtml.Append("</ul>")
-            Return listHtml.ToString()
+            html.AppendLine("</ul>")
         Else
-            ' Handle other complex types as needed
-            Return value.ToString()
+            ' Render simple values directly
+            html.Append(value)
         End If
+
+        Return html.ToString()
     End Function
