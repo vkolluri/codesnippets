@@ -1,1 +1,63 @@
-source.[GetType]().GetProperties(BindingFlags.Instance Or BindingFlags.[Public]).Where(Function(x) x.CanRead AndAlso x.GetGetMethod(False) IsNot Nothing AndAlso x.GetIndexParameters().Length = 0)
+public class CustomReferenceResolver : IReferenceResolver
+{
+    private Dictionary<string, object> _referenceObjects = new Dictionary<string, object>();
+
+    public object ResolveReference(object context, string reference)
+    {
+        if (_referenceObjects.TryGetValue(reference, out var resolvedObject))
+        {
+            return resolvedObject;
+        }
+
+        return null;
+    }
+
+    public string GetReference(object context, object value)
+    {
+        var reference = _referenceObjects.FirstOrDefault(kv => kv.Value == value).Key;
+        if (reference == null)
+        {
+            reference = Guid.NewGuid().ToString();
+            _referenceObjects.Add(reference, value);
+        }
+
+        return reference;
+    }
+
+    public bool IsReferenced(object context, object value)
+    {
+        return _referenceObjects.ContainsValue(value);
+    }
+
+    public void AddReference(object context, string reference, object value)
+    {
+        if (!_referenceObjects.ContainsKey(reference))
+        {
+            _referenceObjects.Add(reference, value);
+        }
+    }
+}
+
+public class CustomReferenceJsonConverter : JsonConverter
+{
+    public override bool CanConvert(Type objectType)
+    {
+        // This converter will be used for all types.
+        return true;
+    }
+
+    public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+    {
+        var jObject = JObject.Load(reader);
+        var reference = (string)jObject["RefId"];
+        return serializer.ReferenceResolver.ResolveReference(null, reference);
+    }
+
+    public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
+    {
+        var reference = serializer.ReferenceResolver.GetReference(null, value);
+        var jObject = new JObject();
+        jObject["RefId"] = reference;
+        serializer.Serialize(writer, jObject);
+    }
+}
