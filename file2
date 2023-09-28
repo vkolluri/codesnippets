@@ -1,46 +1,67 @@
-Shared Function GenerateHtmlTable(data As Object) As String
-        If data Is Nothing Then
-            Return String.Empty
-        End If
+class HtmlTableRenderer<T>
+{
+    public static string RenderToHtml(T obj)
+    {
+        if (obj == null)
+        {
+            return string.Empty;
+        }
 
-        Dim html As New StringBuilder()
-        html.AppendLine("<table class='table table-bordered table-striped'>")
+        Type objectType = typeof(T);
+        PropertyInfo[] properties = objectType.GetProperties();
 
-        Dim objectType As Type = data.GetType()
+        StringBuilder html = new StringBuilder();
+        html.Append("<table border='1'>");
 
-        ' Check if it's an anonymous type (e.g., JObject)
-        If objectType.Name.Contains("<>") AndAlso objectType.Name.Contains("AnonymousType") Then
-            Dim jObject As JObject = JObject.FromObject(data)
+        foreach (PropertyInfo property in properties)
+        {
+            html.Append("<tr>");
+            html.AppendFormat("<th>{0}</th>", property.Name);
+            html.AppendFormat("<td>{0}</td>", RenderPropertyValue(property.GetValue(obj)));
+            html.Append("</tr>");
+        }
 
-            For Each [property] As JProperty In jObject.Properties()
-                html.AppendLine("<tr>")
-                html.AppendLine($"<th>{[property].Name}</th>")
-                html.AppendLine("<td>")
+        html.Append("</table>");
+        return html.ToString();
+    }
 
-                Dim childHtml As String = GenerateHtmlTable([property].Value)
-                html.AppendLine(childHtml)
+    private static string RenderPropertyValue(object value)
+    {
+        if (value == null)
+        {
+            return string.Empty;
+        }
 
-                html.AppendLine("</td>")
-                html.AppendLine("</tr>")
-            Next
-        Else
-            ' Display properties and values of the object
-            Dim properties As PropertyInfo() = objectType.GetProperties()
+        Type valueType = value.GetType();
 
-            For Each [property] As PropertyInfo In properties
-                html.AppendLine("<tr>")
-                html.AppendLine($"<th>{[property].Name}</th>")
-                html.AppendLine("<td>")
+        if (valueType.IsPrimitive || valueType == typeof(string) || valueType.IsEnum)
+        {
+            // Render simple values directly
+            return value.ToString();
+        }
+        else if (valueType.IsClass)
+        {
+            // Recursively render nested objects
+            return RenderToHtml(value);
+        }
+        else if (valueType.IsGenericType && valueType.GetGenericTypeDefinition() == typeof(List<>))
+        {
+            // Handle lists of objects
+            var list = (IEnumerable<object>)value;
+            StringBuilder listHtml = new StringBuilder("<ul>");
 
-                Dim value As Object = [property].GetValue(data)
-                Dim childHtml As String = GenerateHtmlTable(value)
-                html.AppendLine(childHtml)
+            foreach (var item in list)
+            {
+                listHtml.AppendFormat("<li>{0}</li>", RenderPropertyValue(item));
+            }
 
-                html.AppendLine("</td>")
-                html.AppendLine("</tr>")
-            Next
-        End If
-
-        html.AppendLine("</table>")
-        Return html.ToString()
-    End Function
+            listHtml.Append("</ul>");
+            return listHtml.ToString();
+        }
+        else
+        {
+            // Handle other complex types as needed
+            return value.ToString();
+        }
+    }
+}
