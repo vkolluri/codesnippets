@@ -61,3 +61,12 @@ public class CustomReferenceJsonConverter : JsonConverter
         serializer.Serialize(writer, jObject);
     }
 }
+
+
+var resolver = new CustomReferenceResolver();
+        var settings = new JsonSerializerSettings
+        {
+            ReferenceResolverProvider = () => resolver,
+            Converters = { new CustomReferenceJsonConverter() },
+            ContractResolver = new DefaultContractResolver { PreserveReferencesHandling = PreserveReferencesHandling.Objects }
+        };
