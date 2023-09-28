@@ -1,67 +1,51 @@
-class HtmlTableRenderer<T>
-{
-    public static string RenderToHtml(T obj)
-    {
-        if (obj == null)
-        {
-            return string.Empty;
-        }
+Public Shared Function RenderToHtml(obj As T) As String
+        If obj Is Nothing Then
+            Return String.Empty
+        End If
 
-        Type objectType = typeof(T);
-        PropertyInfo[] properties = objectType.GetProperties();
+        Dim objectType As Type = GetType(T)
+        Dim properties As PropertyInfo() = objectType.GetProperties()
 
-        StringBuilder html = new StringBuilder();
-        html.Append("<table border='1'>");
+        Dim html As New StringBuilder()
+        html.Append("<table border='1'>")
 
-        foreach (PropertyInfo property in properties)
-        {
-            html.Append("<tr>");
-            html.AppendFormat("<th>{0}</th>", property.Name);
-            html.AppendFormat("<td>{0}</td>", RenderPropertyValue(property.GetValue(obj)));
-            html.Append("</tr>");
-        }
+        For Each property As PropertyInfo In properties
+            html.Append("<tr>")
+            html.AppendFormat("<th>{0}</th>", property.Name)
+            html.AppendFormat("<td>{0}</td>", RenderPropertyValue(property.GetValue(obj)))
+            html.Append("</tr>")
+        Next
 
-        html.Append("</table>");
-        return html.ToString();
-    }
+        html.Append("</table>")
+        Return html.ToString()
+    End Function
 
-    private static string RenderPropertyValue(object value)
-    {
-        if (value == null)
-        {
-            return string.Empty;
-        }
+    Private Shared Function RenderPropertyValue(value As Object) As String
+        If value Is Nothing Then
+            Return String.Empty
+        End If
 
-        Type valueType = value.GetType();
+        Dim valueType As Type = value.GetType()
 
-        if (valueType.IsPrimitive || valueType == typeof(string) || valueType.IsEnum)
-        {
-            // Render simple values directly
-            return value.ToString();
-        }
-        else if (valueType.IsClass)
-        {
-            // Recursively render nested objects
-            return RenderToHtml(value);
-        }
-        else if (valueType.IsGenericType && valueType.GetGenericTypeDefinition() == typeof(List<>))
-        {
-            // Handle lists of objects
-            var list = (IEnumerable<object>)value;
-            StringBuilder listHtml = new StringBuilder("<ul>");
+        If valueType.IsPrimitive OrElse valueType = GetType(String) OrElse valueType.IsEnum Then
+            ' Render simple values directly
+            Return value.ToString()
+        ElseIf valueType.IsClass Then
+            ' Recursively render nested objects
+            Return RenderToHtml(value)
+        ElseIf valueType.IsGenericType AndAlso valueType.GetGenericTypeDefinition() = GetType(List(Of )) Then
+            ' Handle lists of objects
+            Dim list = DirectCast(value, IEnumerable(Of Object))
+            Dim listHtml As New StringBuilder("<ul>")
 
-            foreach (var item in list)
-            {
-                listHtml.AppendFormat("<li>{0}</li>", RenderPropertyValue(item));
-            }
+            For Each item In list
+                listHtml.AppendFormat("<li>{0}</li>", RenderPropertyValue(item))
+            Next
 
-            listHtml.Append("</ul>");
-            return listHtml.ToString();
-        }
-        else
-        {
-            // Handle other complex types as needed
-            return value.ToString();
-        }
-    }
-}
+            listHtml.Append("</ul>")
+            Return listHtml.ToString()
+        Else
+            ' Handle other complex types as needed
+            Return value.ToString()
+        End If
+    End Function
