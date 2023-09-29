@@ -1,72 +1,33 @@
-public class CustomReferenceResolver : IReferenceResolver
+using DinkToPdf;
+using DinkToPdf.Contracts;
+
+public class PdfExporter
 {
-    private Dictionary<string, object> _referenceObjects = new Dictionary<string, object>();
+    private IConverter _converter;
 
-    public object ResolveReference(object context, string reference)
+    public PdfExporter(IConverter converter)
     {
-        if (_referenceObjects.TryGetValue(reference, out var resolvedObject))
+        _converter = converter;
+    }
+
+    public void ExportHtmlToPdf(string html, string outputPath)
+    {
+        var doc = new HtmlToPdfDocument()
         {
-            return resolvedObject;
-        }
-
-        return null;
-    }
-
-    public string GetReference(object context, object value)
-    {
-        var reference = _referenceObjects.FirstOrDefault(kv => kv.Value == value).Key;
-        if (reference == null)
-        {
-            reference = Guid.NewGuid().ToString();
-            _referenceObjects.Add(reference, value);
-        }
-
-        return reference;
-    }
-
-    public bool IsReferenced(object context, object value)
-    {
-        return _referenceObjects.ContainsValue(value);
-    }
-
-    public void AddReference(object context, string reference, object value)
-    {
-        if (!_referenceObjects.ContainsKey(reference))
-        {
-            _referenceObjects.Add(reference, value);
-        }
-    }
-}
-
-public class CustomReferenceJsonConverter : JsonConverter
-{
-    public override bool CanConvert(Type objectType)
-    {
-        // This converter will be used for all types.
-        return true;
-    }
-
-    public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
-    {
-        var jObject = JObject.Load(reader);
-        var reference = (string)jObject["RefId"];
-        return serializer.ReferenceResolver.ResolveReference(null, reference);
-    }
-
-    public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer)
-    {
-        var reference = serializer.ReferenceResolver.GetReference(null, value);
-        var jObject = new JObject();
-        jObject["RefId"] = reference;
-        serializer.Serialize(writer, jObject);
-    }
-}
-
-
-var resolver = new CustomReferenceResolver();
-        var settings = new JsonSerializerSettings
-        {
-            ReferenceResolverProvider = () => resolver,
-            Converters = { new CustomReferenceJsonConverter() },
-            ContractResolver = new DefaultContractResolver { PreserveReferencesHandling = PreserveReferencesHandling.Objects }
+            GlobalSettings = {
+                PaperSize = PaperKind.A4,
+                Orientation = Orientation.Portrait,
+            },
+            Objects = {
+                new ObjectSettings
+                {
+                    PagesCount = true,
+                    HtmlContent = html,
+                }
+            }
         };
+
+        byte[] pdfBytes = _converter.Convert(doc);
+        File.WriteAllBytes(outputPath, pdfBytes);
+    }
+}
