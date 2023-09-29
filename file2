@@ -1,33 +1,29 @@
-using DinkToPdf;
-using DinkToPdf.Contracts;
+Imports DinkToPdf
+Imports DinkToPdf.Contracts
+Imports System.IO
 
-public class PdfExporter
-{
-    private IConverter _converter;
+Public Class PdfExporter
+    Private _converter As IConverter
 
-    public PdfExporter(IConverter converter)
-    {
-        _converter = converter;
-    }
+    Public Sub New(ByVal converter As IConverter)
+        _converter = converter
+    End Sub
 
-    public void ExportHtmlToPdf(string html, string outputPath)
-    {
-        var doc = new HtmlToPdfDocument()
-        {
-            GlobalSettings = {
-                PaperSize = PaperKind.A4,
-                Orientation = Orientation.Portrait,
+    Public Sub ExportHtmlToPdf(ByVal html As String, ByVal outputPath As String)
+        Dim doc = New HtmlToPdfDocument() With {
+            .GlobalSettings = New GlobalSettings() With {
+                .PaperSize = PaperKind.A4,
+                .Orientation = Orientation.Portrait
             },
-            Objects = {
-                new ObjectSettings
-                {
-                    PagesCount = true,
-                    HtmlContent = html,
+            .Objects = {
+                New ObjectSettings() With {
+                    .PagesCount = True,
+                    .HtmlContent = html
                 }
             }
-        };
+        }
 
-        byte[] pdfBytes = _converter.Convert(doc);
-        File.WriteAllBytes(outputPath, pdfBytes);
-    }
-}
+        Dim pdfBytes As Byte() = _converter.Convert(doc)
+        File.WriteAllBytes(outputPath, pdfBytes)
+    End Sub
+End Class
