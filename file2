@@ -1,29 +1,18 @@
-Imports DinkToPdf
-Imports DinkToPdf.Contracts
-Imports System.IO
-
-Public Class PdfExporter
-    Private _converter As IConverter
-
-    Public Sub New(ByVal converter As IConverter)
-        _converter = converter
-    End Sub
-
-    Public Sub ExportHtmlToPdf(ByVal html As String, ByVal outputPath As String)
+Public Sub ExportHtmlToPdf(ByVal html As String, ByVal outputPath As String)
         Dim doc = New HtmlToPdfDocument() With {
             .GlobalSettings = New GlobalSettings() With {
                 .PaperSize = PaperKind.A4,
                 .Orientation = Orientation.Portrait
-            },
-            .Objects = {
-                New ObjectSettings() With {
-                    .PagesCount = True,
-                    .HtmlContent = html
-                }
             }
         }
+
+        ' Initialize and add ObjectSettings to the Objects collection
+        Dim objectSettings = New ObjectSettings() With {
+            .PagesCount = True,
+            .HtmlContent = html
+        }
+        doc.Objects.Add(objectSettings)
 
         Dim pdfBytes As Byte() = _converter.Convert(doc)
         File.WriteAllBytes(outputPath, pdfBytes)
     End Sub
-End Class
