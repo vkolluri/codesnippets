@@ -1,18 +1,25 @@
-Public Sub ExportHtmlToPdf(ByVal html As String, ByVal outputPath As String)
-        Dim doc = New HtmlToPdfDocument() With {
-            .GlobalSettings = New GlobalSettings() With {
-                .PaperSize = PaperKind.A4,
-                .Orientation = Orientation.Portrait
-            }
-        }
+Sub Main()
+        Dim converter = New SynchronizedConverter(New PdfTools())
+        Dim pdfExporter = New PdfExporter(converter)
 
-        ' Initialize and add ObjectSettings to the Objects collection
-        Dim objectSettings = New ObjectSettings() With {
-            .PagesCount = True,
-            .HtmlContent = html
-        }
-        doc.Objects.Add(objectSettings)
+        Dim htmlTable As String = "
+        <table>
+            <tr>
+                <th>Name</th>
+                <th>Age</th>
+            </tr>
+            <tr>
+                <td>John</td>
+                <td>30</td>
+            </tr>
+            <tr>
+                <td>Alice</td>
+                <td>25</td>
+            </tr>
+        </table>"
 
-        Dim pdfBytes As Byte() = _converter.Convert(doc)
-        File.WriteAllBytes(outputPath, pdfBytes)
+        Dim outputPath As String = "table.pdf" ' Set the desired output file path
+        pdfExporter.ExportHtmlToPdf(htmlTable, outputPath)
+
+        Console.WriteLine($"PDF exported to: {outputPath}")
     End Sub
