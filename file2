@@ -1,25 +1,14 @@
-Sub Main()
-        Dim converter = New SynchronizedConverter(New PdfTools())
-        Dim pdfExporter = New PdfExporter(converter)
+Imports iTextSharp.text
+Imports iTextSharp.text.pdf
 
-        Dim htmlTable As String = "
-        <table>
-            <tr>
-                <th>Name</th>
-                <th>Age</th>
-            </tr>
-            <tr>
-                <td>John</td>
-                <td>30</td>
-            </tr>
-            <tr>
-                <td>Alice</td>
-                <td>25</td>
-            </tr>
-        </table>"
+Public Class PdfExporter
+    Public Sub ExportHtmlToPdf(ByVal html As String, ByVal outputPath As String)
+        Dim document As New Document()
+        Dim writer As PdfWriter = PdfWriter.GetInstance(document, New FileStream(outputPath, FileMode.Create))
 
-        Dim outputPath As String = "table.pdf" ' Set the desired output file path
-        pdfExporter.ExportHtmlToPdf(htmlTable, outputPath)
-
-        Console.WriteLine($"PDF exported to: {outputPath}")
+        document.Open()
+        Dim htmlWorker As New HTMLWorker(document)
+        htmlWorker.Parse(New StringReader(html))
+        document.Close()
     End Sub
+End Class
