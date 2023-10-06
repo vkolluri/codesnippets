@@ -1,4 +1,4 @@
-Imports OfficeOpenXml
+Imports ClosedXML.Excel
 Imports System
 Imports System.Collections.Generic
 Imports System.IO
@@ -6,15 +6,15 @@ Imports System.Reflection
 
 Public Class ExcelExporter
     Public Shared Sub ExportToExcel(Of T)(data As List(Of T), filePath As String)
-        Using package = New ExcelPackage()
-            Dim worksheet = package.Workbook.Worksheets.Add("Data")
+        Using workbook As New XLWorkbook()
+            Dim worksheet As IXLWorksheet = workbook.Worksheets.Add("Data")
 
             ' Get all properties, including nested ones
             Dim properties = GetType(T).GetProperties()
 
             ' Add headers
             For i As Integer = 0 To properties.Length - 1
-                worksheet.Cells(1, i + 1).Value = properties(i).Name
+                worksheet.Cell(1, i + 1).Value = properties(i).Name
             Next
 
             ' Flatten and populate data
@@ -28,13 +28,12 @@ Public Class ExcelExporter
                 Next
 
                 For colIndex As Integer = 0 To row.Count - 1
-                    worksheet.Cells(rowIndex + 2, colIndex + 1).Value = row(colIndex)
+                    worksheet.Cell(rowIndex + 2, colIndex + 1).Value = row(colIndex)
                 Next
             Next
 
             ' Save the Excel file
-            Dim excelFile = New FileInfo(filePath)
-            package.SaveAs(excelFile)
+            workbook.SaveAs(filePath)
         End Using
     End Sub
 
