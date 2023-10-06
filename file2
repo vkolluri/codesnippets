@@ -1,5 +1,5 @@
 Imports Newtonsoft.Json
-Imports System
+Imports Newtonsoft.Json.Linq
 Imports System.Collections.Generic
 
 Module Program
@@ -14,10 +14,10 @@ Module Program
             ""key3"": ""value3""
         }"
 
-        ' Deserialize the JSON string into a Dictionary(Of String, Object)
-        Dim jsonObject As Dictionary(Of String, Object) = JsonConvert.DeserializeObject(Of Dictionary(Of String, Object))(jsonString)
+        ' Deserialize the JSON string to a JObject
+        Dim jsonObject As JObject = JsonConvert.DeserializeObject(Of JObject)(jsonString)
 
-        ' Flatten the dictionary to a Dictionary(Of String, String)
+        ' Flatten the JSON into a Dictionary(Of String, String)
         Dim flattenedDictionary As Dictionary(Of String, String) = FlattenJsonObject(jsonObject)
 
         ' Print the flattened dictionary
@@ -26,19 +26,38 @@ Module Program
         Next
     End Sub
 
-    ' Recursively flatten a nested dictionary to a Dictionary(Of String, String)
-    Private Function FlattenJsonObject(jsonObject As Dictionary(Of String, Object)) As Dictionary(Of String, String)
+    ' Recursively flatten a JSON object into a Dictionary(Of String, String)
+    Private Function FlattenJsonObject(jsonObj As JObject, Optional prefix As String = "") As Dictionary(Of String, String)
         Dim flattenedDictionary As New Dictionary(Of String, String)()
 
-        For Each kvp In jsonObject
-            If TypeOf kvp.Value Is String Then
-                flattenedDictionary.Add(kvp.Key, kvp.Value.ToString())
-            ElseIf TypeOf kvp.Value Is Dictionary(Of String, Object) Then
-                Dim nestedObject As Dictionary(Of String, Object) = DirectCast(kvp.Value, Dictionary(Of String, Object))
-                Dim nestedFlattenedDictionary As Dictionary(Of String, String) = FlattenJsonObject(nestedObject)
-                For Each nestedKvp In nestedFlattenedDictionary
-                    flattenedDictionary.Add($"{kvp.Key}.{nestedKvp.Key}", nestedKvp.Value)
+        For Each prop As JProperty In jsonObj.Properties()
+            Dim propertyName As String = prop.Name
+            Dim propertyValue As JToken = prop.Value
+
+            If propertyValue.Type = JTokenType.Object Then
+                Dim nestedObject As JObject = DirectCast(propertyValue, JObject)
+                Dim nestedPrefix As String = If(String.IsNullOrEmpty(prefix), propertyName, $"{prefix}.{propertyName}")
+                Dim nestedFlattenedDictionary As Dictionary(Of String, String) = FlattenJsonObject(nestedObject, nestedPrefix)
+                For Each kvp In nestedFlattenedDictionary
+                    flattenedDictionary(kvp.Key) = kvp.Value
                 Next
+            ElseIf propertyValue.Type = JTokenType.Array Then
+                Dim index As Integer = 0
+                For Each item As JToken In propertyValue
+                    Dim itemPrefix As String = If(String.IsNullOrEmpty(prefix), propertyName, $"{prefix}.{propertyName}[{index}]")
+                    If item.Type = JTokenType.Object Then
+                        Dim nestedObject As JObject = DirectCast(item, JObject)
+                        Dim nestedFlattenedDictionary As Dictionary(Of String, String) = FlattenJsonObject(nestedObject, itemPrefix)
+                        For Each kvp In nestedFlattenedDictionary
+                            flattenedDictionary(kvp.Key) = kvp.Value
+                        Next
+                    Else
+                        flattenedDictionary(itemPrefix) = item.ToString()
+                    End If
+                    index += 1
+                Next
+            Else
+                flattenedDictionary($"{prefix}.{propertyName}") = propertyValue.ToString()
             End If
         Next
 
