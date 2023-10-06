@@ -1,61 +1,42 @@
 Imports ClosedXML.Excel
 Imports System
-Imports System.Collections.Generic
-Imports System.IO
 Imports System.Reflection
 
 Public Class ExcelExporter
-    Public Shared Sub ExportToExcel(Of T)(data As List(Of T), filePath As String)
+    Public Shared Sub ExportToExcel(Of T)(data As T, filePath As String)
         Using workbook As New XLWorkbook()
             Dim worksheet As IXLWorksheet = workbook.Worksheets.Add("Data")
 
-            ' Get all properties, including nested ones
-            Dim properties = GetType(T).GetProperties()
-
-            ' Add headers
-            For i As Integer = 0 To properties.Length - 1
-                worksheet.Cell(1, i + 1).Value = properties(i).Name
-            Next
-
-            ' Flatten and populate data
-            For rowIndex As Integer = 0 To data.Count - 1
-                Dim item = data(rowIndex)
-                Dim row = New List(Of Object)()
-
-                For Each prop As PropertyInfo In properties
-                    Dim value = FlattenProperty(item, prop)
-                    row.Add(value)
-                Next
-
-                For colIndex As Integer = 0 To row.Count - 1
-                    worksheet.Cell(rowIndex + 2, colIndex + 1).Value = row(colIndex)
-                Next
-            Next
+            ' Recursively add headers and data for complex nested objects
+            ExportProperties(worksheet, data, 1)
 
             ' Save the Excel file
             workbook.SaveAs(filePath)
         End Using
     End Sub
 
-    Private Shared Function FlattenProperty(obj As Object, prop As PropertyInfo) As Object
-        Dim value = prop.GetValue(obj)
-        If value Is Nothing Then
-            Return DBNull.Value
-        End If
+    Private Shared Sub ExportProperties(sheet As IXLWorksheet, obj As Object, startRow As Integer, Optional prefix As String = "")
+        Dim properties = obj.GetType().GetProperties()
 
-        ' Check if the property is a nested object
-        If prop.PropertyType.IsClass AndAlso prop.PropertyType IsNot GetType(String) Then
-            Dim nestedProperties = prop.PropertyType.GetProperties()
-            Dim nestedRow = New List(Of Object)()
+        For Each prop In properties
+            Dim value = prop.GetValue(obj)
+            Dim row = startRow
+            sheet.Cell(row, 1).Value = prefix & prop.Name
 
-            For Each nestedProp As PropertyInfo In nestedProperties
-                Dim nestedValue = FlattenProperty(value, nestedProp)
-                nestedRow.Add(nestedValue)
-            Next
+            If value Is Nothing Then
+                sheet.Cell(row, 2).Value = DBNull.Value
+            ElseIf IsSimpleType(prop.PropertyType) Then
+                sheet.Cell(row, 2).Value = value
+            Else
+                ExportProperties(sheet, value, row + 1, prefix & prop.Name & ".")
+            End If
+        Next
+    End Sub
 
-            Return String.Join(", ", nestedRow)
-        End If
-
-        Return value
+    Private Shared Function IsSimpleType(type As Type) As Boolean
+        Return type.IsValueType OrElse
+               type Is GetType(String) OrElse
+               type Is GetType(Decimal) OrElse
+               type Is GetType(DateTime)
     End Function
 End Class
