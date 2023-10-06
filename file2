@@ -1,42 +1,62 @@
-Imports ClosedXML.Excel
 Imports System
+Imports System.Collections.Generic
 Imports System.Reflection
 
-Public Class ExcelExporter
-    Public Shared Sub ExportToExcel(Of T)(data As T, filePath As String)
-        Using workbook As New XLWorkbook()
-            Dim worksheet As IXLWorksheet = workbook.Worksheets.Add("Data")
+Public Class ObjectPropertyExtractor
+    Public Shared Function AllPropsWithValues(ByVal first As Object) As List(Of (String, String))
+        Dim ans As New List(Of (String, String))()
 
-            ' Recursively add headers and data for complex nested objects
-            ExportProperties(worksheet, data, 1)
+        Dim workQueue As New Queue(Of (String, Object))()
+        workQueue.Enqueue(("", first))
 
-            ' Save the Excel file
-            workbook.SaveAs(filePath)
-        End Using
-    End Sub
+        While Not workQueue.IsEmpty()
+            Dim (objName, workObj) = workQueue.Dequeue()
+            If workObj IsNot Nothing Then
+                Dim workType = workObj.GetType()
 
-    Private Shared Sub ExportProperties(sheet As IXLWorksheet, obj As Object, startRow As Integer, Optional prefix As String = "")
-        Dim properties = obj.GetType().GetProperties()
-
-        For Each prop In properties
-            Dim value = prop.GetValue(obj)
-            Dim row = startRow
-            sheet.Cell(row, 1).Value = prefix & prop.Name
-
-            If value Is Nothing Then
-                sheet.Cell(row, 2).Value = DBNull.Value
-            ElseIf IsSimpleType(prop.PropertyType) Then
-                sheet.Cell(row, 2).Value = value
-            Else
-                ExportProperties(sheet, value, row + 1, prefix & prop.Name & ".")
+                If workType.IsSimple() Then
+                    ans.Add((objName, workObj.ToString()))
+                ElseIf workType.IsIEnumerable() Then
+                    Dim index = 0
+                    For Each obj In DirectCast(workObj, IEnumerable)
+                        workQueue.Enqueue(($"{objName}[{index}]", obj))
+                        index += 1
+                    Next
+                Else
+                    For Each pi In workType.GetProperties()
+                        workQueue.Enqueue(($"{objName.SuffixNonEmpty(".")}{pi.Name}", pi.GetValue(workObj)))
+                    Next
+                End If
             End If
-        Next
-    End Sub
-
-    Private Shared Function IsSimpleType(type As Type) As Boolean
-        Return type.IsValueType OrElse
-               type Is GetType(String) OrElse
-               type Is GetType(Decimal) OrElse
-               type Is GetType(DateTime)
+        End While
+        Return ans
     End Function
 End Class
+
+Module Extensions
+    <Runtime.CompilerServices.Extension>
+    Public Function IsSimple(ByVal type As Type) As Boolean
+        Return type.IsValueType OrElse
+               type = GetType(String) OrElse
+               type = GetType(Decimal) OrElse
+               type = GetType(DateTime)
+    End Function
+
+    <Runtime.CompilerServices.Extension>
+    Public Function IsIEnumerable(ByVal type As Type) As Boolean
+        Return type.GetInterfaces().Any(Function(i) i.IsGenericType AndAlso i.GetGenericTypeDefinition() = GetType(IEnumerable(Of )))
+    End Function
+
+    <Runtime.CompilerServices.Extension>
+    Public Function SuffixNonEmpty(ByVal input As String, ByVal suffix As String) As String
+        If String.IsNullOrEmpty(input) Then
+            Return input
+        End If
+        Return input + suffix
+    End Function
+
+    <Runtime.CompilerServices.Extension>
+    Public Function IsEmpty(Of T)(ByVal queue As Queue(Of T)) As Boolean
+        Return queue.Count = 0
+    End Function
+End Module
