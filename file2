@@ -1,62 +1,47 @@
+Imports Newtonsoft.Json
 Imports System
 Imports System.Collections.Generic
-Imports System.Reflection
 
-Public Class ObjectPropertyExtractor
-    Public Shared Function AllPropsWithValues(ByVal first As Object) As List(Of (String, String))
-        Dim ans As New List(Of (String, String))()
+Module Program
+    Sub Main()
+        ' Your complex JSON string
+        Dim jsonString As String = "{
+            ""key1"": ""value1"",
+            ""key2"": {
+                ""nestedKey1"": ""nestedValue1"",
+                ""nestedKey2"": ""nestedValue2""
+            },
+            ""key3"": ""value3""
+        }"
 
-        Dim workQueue As New Queue(Of (String, Object))()
-        workQueue.Enqueue(("", first))
+        ' Deserialize the JSON string into a Dictionary(Of String, Object)
+        Dim jsonObject As Dictionary(Of String, Object) = JsonConvert.DeserializeObject(Of Dictionary(Of String, Object))(jsonString)
 
-        While Not workQueue.IsEmpty()
-            Dim (objName, workObj) = workQueue.Dequeue()
-            If workObj IsNot Nothing Then
-                Dim workType = workObj.GetType()
+        ' Flatten the dictionary to a Dictionary(Of String, String)
+        Dim flattenedDictionary As Dictionary(Of String, String) = FlattenJsonObject(jsonObject)
 
-                If workType.IsSimple() Then
-                    ans.Add((objName, workObj.ToString()))
-                ElseIf workType.IsIEnumerable() Then
-                    Dim index = 0
-                    For Each obj In DirectCast(workObj, IEnumerable)
-                        workQueue.Enqueue(($"{objName}[{index}]", obj))
-                        index += 1
-                    Next
-                Else
-                    For Each pi In workType.GetProperties()
-                        workQueue.Enqueue(($"{objName.SuffixNonEmpty(".")}{pi.Name}", pi.GetValue(workObj)))
-                    Next
-                End If
+        ' Print the flattened dictionary
+        For Each kvp In flattenedDictionary
+            Console.WriteLine($"{kvp.Key}: {kvp.Value}")
+        Next
+    End Sub
+
+    ' Recursively flatten a nested dictionary to a Dictionary(Of String, String)
+    Private Function FlattenJsonObject(jsonObject As Dictionary(Of String, Object)) As Dictionary(Of String, String)
+        Dim flattenedDictionary As New Dictionary(Of String, String)()
+
+        For Each kvp In jsonObject
+            If TypeOf kvp.Value Is String Then
+                flattenedDictionary.Add(kvp.Key, kvp.Value.ToString())
+            ElseIf TypeOf kvp.Value Is Dictionary(Of String, Object) Then
+                Dim nestedObject As Dictionary(Of String, Object) = DirectCast(kvp.Value, Dictionary(Of String, Object))
+                Dim nestedFlattenedDictionary As Dictionary(Of String, String) = FlattenJsonObject(nestedObject)
+                For Each nestedKvp In nestedFlattenedDictionary
+                    flattenedDictionary.Add($"{kvp.Key}.{nestedKvp.Key}", nestedKvp.Value)
+                Next
             End If
-        End While
-        Return ans
-    End Function
-End Class
+        Next
 
-Module Extensions
-    <Runtime.CompilerServices.Extension>
-    Public Function IsSimple(ByVal type As Type) As Boolean
-        Return type.IsValueType OrElse
-               type = GetType(String) OrElse
-               type = GetType(Decimal) OrElse
-               type = GetType(DateTime)
-    End Function
-
-    <Runtime.CompilerServices.Extension>
-    Public Function IsIEnumerable(ByVal type As Type) As Boolean
-        Return type.GetInterfaces().Any(Function(i) i.IsGenericType AndAlso i.GetGenericTypeDefinition() = GetType(IEnumerable(Of )))
-    End Function
-
-    <Runtime.CompilerServices.Extension>
-    Public Function SuffixNonEmpty(ByVal input As String, ByVal suffix As String) As String
-        If String.IsNullOrEmpty(input) Then
-            Return input
-        End If
-        Return input + suffix
-    End Function
-
-    <Runtime.CompilerServices.Extension>
-    Public Function IsEmpty(Of T)(ByVal queue As Queue(Of T)) As Boolean
-        Return queue.Count = 0
+        Return flattenedDictionary
     End Function
 End Module
