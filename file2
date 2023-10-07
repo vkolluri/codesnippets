@@ -1,66 +1,61 @@
-Imports Newtonsoft.Json
-Imports Newtonsoft.Json.Linq
-Imports System.Collections.Generic
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using DocumentFormat.OpenXml;
+using DocumentFormat.OpenXml.Packaging;
+using DocumentFormat.OpenXml.Spreadsheet;
 
-Module Program
-    Sub Main()
-        ' Your complex JSON string
-        Dim jsonString As String = "{
-            ""key1"": ""value1"",
-            ""key2"": {
-                ""nestedKey1"": ""nestedValue1"",
-                ""nestedKey2"": ""nestedValue2""
-            },
-            ""key3"": ""value3""
-        }"
+public static class ExcelExporter
+{
+    public static void ExportToExcel<T>(List<T> data, string filePath)
+    {
+        // Create a new spreadsheet document
+        using (var spreadsheet = SpreadsheetDocument.Create(filePath, SpreadsheetDocumentType.Workbook))
+        {
+            var workbookPart = spreadsheet.AddWorkbookPart();
+            workbookPart.Workbook = new Workbook();
 
-        ' Deserialize the JSON string to a JObject
-        Dim jsonObject As JObject = JsonConvert.DeserializeObject(Of JObject)(jsonString)
+            var worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
+            var worksheet = new Worksheet();
+            var sheetData = new SheetData();
 
-        ' Flatten the JSON into a Dictionary(Of String, String)
-        Dim flattenedDictionary As Dictionary(Of String, String) = FlattenJsonObject(jsonObject)
+            worksheet.AppendChild(sheetData);
 
-        ' Print the flattened dictionary
-        For Each kvp In flattenedDictionary
-            Console.WriteLine($"{kvp.Key}: {kvp.Value}")
-        Next
-    End Sub
+            var sheets = spreadsheet.WorkbookPart.Workbook.AppendChild(new Sheets());
+            var sheet = new Sheet
+            {
+                Id = spreadsheet.WorkbookPart.GetIdOfPart(worksheetPart),
+                SheetId = 1,
+                Name = "Sheet1"
+            };
+            sheets.AppendChild(sheet);
 
-    ' Recursively flatten a JSON object into a Dictionary(Of String, String)
-    Private Function FlattenJsonObject(jsonObj As JObject, Optional prefix As String = "") As Dictionary(Of String, String)
-        Dim flattenedDictionary As New Dictionary(Of String, String)()
+            var properties = typeof(T).GetProperties();
 
-        For Each prop As JProperty In jsonObj.Properties()
-            Dim propertyName As String = prop.Name
-            Dim propertyValue As JToken = prop.Value
+            // Add headers
+            var headerRow = new Row();
+            foreach (var prop in properties)
+            {
+                var cell = new Cell(new InlineString(new Text(prop.Name)));
+                headerRow.AppendChild(cell);
+            }
+            sheetData.AppendChild(headerRow);
 
-            If propertyValue.Type = JTokenType.Object Then
-                Dim nestedObject As JObject = DirectCast(propertyValue, JObject)
-                Dim nestedPrefix As String = If(String.IsNullOrEmpty(prefix), propertyName, $"{prefix}.{propertyName}")
-                Dim nestedFlattenedDictionary As Dictionary(Of String, String) = FlattenJsonObject(nestedObject, nestedPrefix)
-                For Each kvp In nestedFlattenedDictionary
-                    flattenedDictionary(kvp.Key) = kvp.Value
-                Next
-            ElseIf propertyValue.Type = JTokenType.Array Then
-                Dim index As Integer = 0
-                For Each item As JToken In propertyValue
-                    Dim itemPrefix As String = If(String.IsNullOrEmpty(prefix), propertyName, $"{prefix}.{propertyName}[{index}]")
-                    If item.Type = JTokenType.Object Then
-                        Dim nestedObject As JObject = DirectCast(item, JObject)
-                        Dim nestedFlattenedDictionary As Dictionary(Of String, String) = FlattenJsonObject(nestedObject, itemPrefix)
-                        For Each kvp In nestedFlattenedDictionary
-                            flattenedDictionary(kvp.Key) = kvp.Value
-                        Next
-                    Else
-                        flattenedDictionary(itemPrefix) = item.ToString()
-                    End If
-                    index += 1
-                Next
-            Else
-                flattenedDictionary($"{prefix}.{propertyName}") = propertyValue.ToString()
-            End If
-        Next
+            // Add data
+            foreach (var item in data)
+            {
+                var dataRow = new Row();
+                foreach (var prop in properties)
+                {
+                    var value = prop.GetValue(item);
+                    var cell = new Cell(new InlineString(new Text(value?.ToString())));
+                    dataRow.AppendChild(cell);
+                }
+                sheetData.AppendChild(dataRow);
+            }
 
-        Return flattenedDictionary
-    End Function
-End Module
+            worksheetPart.Worksheet = worksheet;
+        }
+    }
+}
