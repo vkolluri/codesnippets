@@ -1,27 +1,76 @@
-Public Sub exportTableExcel(ByVal aTable, ByVal filename)
+Imports System
+Imports System.Collections.Generic
+Imports System.Web.UI.HtmlControls
+Imports HtmlAgilityPack
 
+Public Module Program
+    Public Function ParseNestedHtmlTable(htmlString As String) As HtmlTable
+        ' Create a new HtmlTable control
+        Dim htmlTable As New HtmlTable()
 
-    Dim sw As New StringWriter()
-    Dim htw As New HtmlTextWriter(sw)
+        ' Load the HTML string into an HtmlDocument
+        Dim htmlDoc As New HtmlDocument()
+        htmlDoc.LoadHtml(htmlString)
 
-    HttpContext.Current.Response.ClearContent()
-    HttpContext.Current.Response.AddHeader("content-disposition", "attachment; filename=" & filename)
-    HttpContext.Current.Response.ContentType = "application/vnd.xls"
-    HttpContext.Current.Response.Charset = ""
+        ' Find all table elements in the HTML
+        Dim tableElements = htmlDoc.DocumentNode.SelectNodes("//table")
 
-    ' Create a form to contain the table 
-    Dim frm As New HtmlForm()
-    aTable.Parent.Controls.Add(frm)
-    frm.Attributes("runat") = "server"
-    'prevent additional code from being exported
-    frm.attributes("maintainScrollPositionOnPostBack") = "false"
+        If tableElements IsNot Nothing Then
+            ' Iterate through each table element
+            For Each tableElement In tableElements
+                ' Create a new HtmlTableRow for each row in the table
+                Dim tableRow As New HtmlTableRow()
 
-    frm.Controls.Add(aTable)
-    frm.RenderControl(htw)
-    HttpContext.Current.Response.Write(sw.ToString())
-    HttpContext.Current.Response.End()
+                ' Find all row elements (tr) within the current table
+                Dim rowElements = tableElement.SelectNodes("tr")
 
-    frm.Dispose()
-    htw.Dispose()
-    sw.Dispose()
-End Sub
+                If rowElements IsNot Nothing Then
+                    ' Iterate through each row
+                    For Each rowElement In rowElements
+                        ' Create a new HtmlTableCell for each cell in the row
+                        Dim tableCell As New HtmlTableCell()
+
+                        ' Find all cell elements (td or th) within the current row
+                        Dim cellElements = rowElement.SelectNodes("td|th")
+
+                        If cellElements IsNot Nothing Then
+                            ' Iterate through each cell
+                            For Each cellElement In cellElements
+                                ' Check if the cell contains nested tables
+                                Dim nestedTables = cellElement.SelectNodes("table")
+                                If nestedTables IsNot Nothing Then
+                                    ' Create a new HtmlTable for each nested table
+                                    For Each nestedTable In nestedTables
+                                        ' Recursively parse the nested table
+                                        Dim nestedHtmlTable = ParseNestedHtmlTable(nestedTable.OuterHtml)
+
+                                        ' Add the nested table to the cell
+                                        tableCell.Controls.Add(nestedHtmlTable)
+                                    Next
+                                Else
+                                    ' Add the inner HTML of the cell to the table cell
+                                    tableCell.InnerHtml = cellElement.InnerHtml
+                                End If
+
+                                ' Add the table cell to the table row
+                                tableRow.Cells.Add(tableCell.Clone())
+                            Next
+                        End If
+
+                        ' Add the table row to the table
+                        htmlTable.Rows.Add(tableRow.Clone())
+                    Next
+                End If
+            Next
+        End If
+
+        Return htmlTable
+    End Function
+
+    Public Sub Main()
+        Dim htmlString As String = "<table><tr><td>Outer Cell 1</td><td><table><tr><td>Nested Cell 1</td></tr></table></td></tr></table>"
+        Dim htmlTable As HtmlTable = ParseNestedHtmlTable(htmlString)
+
+        ' You can now use the 'htmlTable' control as needed in your application.
+    End Sub
+End Module
