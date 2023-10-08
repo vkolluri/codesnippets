@@ -1,61 +1,27 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using DocumentFormat.OpenXml;
-using DocumentFormat.OpenXml.Packaging;
-using DocumentFormat.OpenXml.Spreadsheet;
+Public Sub exportTableExcel(ByVal aTable, ByVal filename)
 
-public static class ExcelExporter
-{
-    public static void ExportToExcel<T>(List<T> data, string filePath)
-    {
-        // Create a new spreadsheet document
-        using (var spreadsheet = SpreadsheetDocument.Create(filePath, SpreadsheetDocumentType.Workbook))
-        {
-            var workbookPart = spreadsheet.AddWorkbookPart();
-            workbookPart.Workbook = new Workbook();
 
-            var worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
-            var worksheet = new Worksheet();
-            var sheetData = new SheetData();
+    Dim sw As New StringWriter()
+    Dim htw As New HtmlTextWriter(sw)
 
-            worksheet.AppendChild(sheetData);
+    HttpContext.Current.Response.ClearContent()
+    HttpContext.Current.Response.AddHeader("content-disposition", "attachment; filename=" & filename)
+    HttpContext.Current.Response.ContentType = "application/vnd.xls"
+    HttpContext.Current.Response.Charset = ""
 
-            var sheets = spreadsheet.WorkbookPart.Workbook.AppendChild(new Sheets());
-            var sheet = new Sheet
-            {
-                Id = spreadsheet.WorkbookPart.GetIdOfPart(worksheetPart),
-                SheetId = 1,
-                Name = "Sheet1"
-            };
-            sheets.AppendChild(sheet);
+    ' Create a form to contain the table 
+    Dim frm As New HtmlForm()
+    aTable.Parent.Controls.Add(frm)
+    frm.Attributes("runat") = "server"
+    'prevent additional code from being exported
+    frm.attributes("maintainScrollPositionOnPostBack") = "false"
 
-            var properties = typeof(T).GetProperties();
+    frm.Controls.Add(aTable)
+    frm.RenderControl(htw)
+    HttpContext.Current.Response.Write(sw.ToString())
+    HttpContext.Current.Response.End()
 
-            // Add headers
-            var headerRow = new Row();
-            foreach (var prop in properties)
-            {
-                var cell = new Cell(new InlineString(new Text(prop.Name)));
-                headerRow.AppendChild(cell);
-            }
-            sheetData.AppendChild(headerRow);
-
-            // Add data
-            foreach (var item in data)
-            {
-                var dataRow = new Row();
-                foreach (var prop in properties)
-                {
-                    var value = prop.GetValue(item);
-                    var cell = new Cell(new InlineString(new Text(value?.ToString())));
-                    dataRow.AppendChild(cell);
-                }
-                sheetData.AppendChild(dataRow);
-            }
-
-            worksheetPart.Worksheet = worksheet;
-        }
-    }
-}
+    frm.Dispose()
+    htw.Dispose()
+    sw.Dispose()
+End Sub
