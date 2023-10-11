@@ -1,43 +1,78 @@
- Public Function ParseHtmlTable(htmlString As String) As Table
-        ' Create a new Table control
-        Dim htmlTable As New Table()
+Imports System
+Imports System.Collections.Generic
+Imports OfficeOpenXml
 
-        ' Create a TextReader to load HTML string as XML
-        Using reader As New StringReader("<root>" & htmlString & "</root>")
-            Dim settings As New System.Xml.XmlReaderSettings()
-            settings.ConformanceLevel = System.Xml.ConformanceLevel.Fragment
-            settings.IgnoreWhitespace = True
+Module Program
+    Sub Main()
+        Dim filePath As String = "output.xlsx" ' Change the file path as needed
 
-            ' Create an XmlReader
-            Using xmlReader As System.Xml.XmlReader = System.Xml.XmlReader.Create(reader, settings)
-                While xmlReader.Read()
-                    If xmlReader.NodeType = System.Xml.XmlNodeType.Element AndAlso xmlReader.Name = "table" Then
-                        ' Create a new TableRow for each row in the table
-                        Dim tableRow As New TableRow()
+        Using package As New ExcelPackage()
+            Dim worksheet As ExcelWorksheet = package.Workbook.Worksheets.Add("Data")
 
-                        While xmlReader.Read()
-                            If xmlReader.NodeType = System.Xml.XmlNodeType.Element AndAlso
-                                (xmlReader.Name = "td" OrElse xmlReader.Name = "th") Then
+            ' Your deeply nested object (replace this with your data)
+            Dim deeplyNestedObject = New With {
+                .name = "John",
+                .age = 30,
+                .address = New With {
+                    .street = "123 Main St",
+                    .city = "Exampleville",
+                    .country = New With {
+                        .name = "United States",
+                        .code = "US",
+                        .state = New With {
+                            .name = "New York",
+                            .code = "NY",
+                            .region = New With {
+                                .name = "Northeast",
+                                .code = "NE",
+                                .moreData = New With {
+                                    .key1 = "Value1",
+                                    .key2 = "Value2"
+                                }
+                            }
+                        }
+                    }
+                },
+                .hobbies = {"Reading", "Hiking"}
+            }
 
-                                ' Create a new TableCell for each cell in the row
-                                Dim tableCell As New TableCell()
+            Dim startColumn As Integer = 1
+            Dim startRow As Integer = 1
 
-                                ' Read the inner text of the cell
-                                tableCell.Text = xmlReader.ReadElementContentAsString()
+            WriteObjectToExcel(worksheet, deeplyNestedObject, startRow, startColumn)
 
-                                ' Add the table cell to the table row
-                                tableRow.Cells.Add(tableCell)
-                            ElseIf xmlReader.NodeType = System.Xml.XmlNodeType.EndElement AndAlso
-                                xmlReader.Name = "tr" Then
-                                ' End of the row, add the table row to the table
-                                htmlTable.Rows.Add(tableRow)
-                                Exit While
-                            End If
-                        End While
-                    End If
-                End While
-            End Using
+            ' Save the Excel file
+            package.SaveAs(New System.IO.FileInfo(filePath))
         End Using
 
-        Return htmlTable
-    End Function
+        Console.WriteLine("Excel file saved.")
+    End Sub
+
+    Sub WriteObjectToExcel(worksheet As ExcelWorksheet, obj As Object, ByRef row As Integer, ByRef col As Integer, Optional parentKey As String = "")
+        If TypeOf obj Is IDictionary(Of String, Object) Then
+            For Each kvp In DirectCast(obj, IDictionary(Of String, Object))
+                Dim key = kvp.Key
+                Dim value = kvp.Value
+
+                worksheet.Cells(row, col).Value = key
+                worksheet.Cells(row + 1, col).Value = value.ToString()
+
+                ' Check if the value is a nested object
+                If TypeOf value Is IDictionary(Of String, Object) Then
+                    col += 1
+                    worksheet.Cells(row + 2, col).Value = "Nested Properties"
+                    col += 1
+                    WriteObjectToExcel(worksheet, DirectCast(value, IDictionary(Of String, Object)), row, col, key)
+                End If
+
+                col += 1
+            Next
+        ElseIf TypeOf obj Is IEnumerable(Of Object) Then
+            ' Handle lists if needed
+        Else
+            worksheet.Cells(row, col).Value = parentKey
+            worksheet.Cells(row + 1, col).Value = obj.ToString()
+            col += 1
+        End If
+    End Sub
+End Module
