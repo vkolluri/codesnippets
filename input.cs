@@ -1,29 +1,81 @@
- Public Function DefineColumnsFromJson(jsonString As String) As DataTable
-        Dim json As JObject = JObject.Parse(jsonString)
-        Dim dt As New DataTable()
+DECLARE @json NVARCHAR(MAX)
 
-        AddColumnsFromJObject(json, dt, String.Empty)
+SET @json = '...' -- Your JSON string
 
-        Return dt
-    End Function
+-- Parse reportDetails
+SELECT 
+    reportTypeCode,
+    submitTypeCode,
+    reportingEntityNumber,
+    submittingReportingEntityNumber,
+    reportingEntityReportReference,
+    JSON_VALUE(twentyFourHourRule, '$.aggregationTypeCode') AS aggregationTypeCode,
+    JSON_VALUE(twentyFourHourRule, '$.periodStart') AS periodStart,
+    JSON_VALUE(twentyFourHourRule, '$.periodEnd') AS periodEnd,
+    activitySectorCode,
+    reportingEntityContactId
+FROM OPENJSON (@json)
+WITH (
+    reportTypeCode INT '$.reportDetails.reportTypeCode',
+    submitTypeCode INT '$.reportDetails.submitTypeCode',
+    reportingEntityNumber INT '$.reportDetails.reportingEntityNumber',
+    submittingReportingEntityNumber INT '$.reportDetails.submittingReportingEntityNumber',
+    reportingEntityReportReference NVARCHAR(255) '$.reportDetails.reportingEntityReportReference',
+    twentyFourHourRule NVARCHAR(MAX) AS JSON '$.reportDetails.twentyFourHourRule',
+    activitySectorCode INT '$.reportDetails.activitySectorCode',
+    reportingEntityContactId INT '$.reportDetails.reportingEntityContactId'
+)
 
-    Private Sub AddColumnsFromJObject(obj As JObject, dt As DataTable, parentName As String)
-        For Each property In obj.Properties()
-            Dim columnName As String
-            If String.IsNullOrEmpty(parentName) Then
-                columnName = property.Name
-            Else
-                columnName = parentName & "." & property.Name
-            End If
+-- Parse definitions
+SELECT 
+    typeCode,
+    refId,
+    surname,
+    givenName,
+    nameOfEntity,
+    telephoneNumber,
+    dateOfBirth,
+    countryOfResidenceCode,
+    addressTypeCode,
+    occupation,
+    nameOfEmployer
+FROM OPENJSON (@json, '$.definitions')
+WITH (
+    typeCode INT,
+    refId NVARCHAR(255),
+    surname NVARCHAR(255),
+    givenName NVARCHAR(255),
+    nameOfEntity NVARCHAR(255),
+    telephoneNumber NVARCHAR(20),
+    dateOfBirth DATE,
+    countryOfResidenceCode NVARCHAR(10),
+    addressTypeCode INT,
+    occupation NVARCHAR(255),
+    nameOfEmployer NVARCHAR(255)
+)
 
-            If TypeOf property.Value Is JObject Then
-                AddColumnsFromJObject(CType(property.Value, JObject), dt, columnName)
-            ElseIf TypeOf property.Value Is JArray AndAlso CType(property.Value, JArray).Count > 0 AndAlso TypeOf CType(property.Value, JArray)(0) Is JObject Then
-                AddColumnsFromJObject(CType(CType(property.Value, JArray)(0), JObject), dt, columnName)
-            Else
-                If Not dt.Columns.Contains(columnName) Then
-                    dt.Columns.Add(columnName)
-                End If
-            End If
-        Next
-    End Sub
+-- Parse transactions
+SELECT 
+    reportingEntityLocationId,
+    thresholdIndicator,
+    reportingEntityTransactionReference,
+    dateTimeOfTransaction,
+    methodCode,
+    amount,
+    currencyCode,
+    conductorTypeCode,
+    conductorRefId,
+    dispositionCode
+FROM OPENJSON (@json, '$.transactions')
+WITH (
+    reportingEntityLocationId NVARCHAR(50),
+    thresholdIndicator BIT '$.largeCashTransactionDetails.thresholdIndicator',
+    reportingEntityTransactionReference NVARCHAR(255) '$.largeCashTransactionDetails.reportingEntityTransactionReference',
+    dateTimeOfTransaction DATETIME '$.largeCashTransactionDetails.dateTimeOfTransaction',
+    methodCode INT '$.largeCashTransactionDetails.methodCode',
+    amount MONEY '$.startingActions[0].details.amount',
+    currencyCode NVARCHAR(10) '$.startingActions[0].details.currencyCode',
+    conductorTypeCode INT '$.startingActions[0].conductors[0].typeCode',
+    conductorRefId NVARCHAR(255) '$.startingActions[0].conductors[0].refId',
+    dispositionCode INT '$.completingActions[0].details.dispositionCode'
+)
