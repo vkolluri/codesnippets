@@ -1,0 +1,35 @@
+Imports ChoETL
+Imports System.Collections.Generic
+Imports System.Data
+
+Module Program
+    Sub Main()
+        Dim json As String = "YOUR_JSON_STRING_HERE"
+
+        GetType(ChoJSONReader).GetAssemblyVersion().Print()
+
+        Using r = ChoJSONReader.LoadText(json).With(Function(c) c.FlattenNode = True).With(Function(c) c.FlattenByNodeName = "reportDetails")
+            Dim dt As DataTable = r.AsDataTable()
+
+            ' Example mappings (customize according to your JSON structure)
+            Dim mappings As New Dictionary(Of String, String) From {
+                {"ParentNode_ChildNode_PropertyName", "SimpleName"}
+                ' Add more mappings as needed
+            }
+
+            ' Rename columns according to mappings
+            For Each col As DataColumn In dt.Columns
+                If mappings.ContainsKey(col.ColumnName) Then
+                    col.ColumnName = mappings(col.ColumnName)
+                End If
+            Next
+
+            Dim filePath As String = "OutputExcelFile.xlsx"
+            Using w = New ChoExcelWriter(filePath).WithFirstLineHeader()
+                w.Write(dt)
+            End Using
+        End Using
+
+        Console.WriteLine("Data has been exported to Excel file successfully!")
+    End Sub
+End Module
