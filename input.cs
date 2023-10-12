@@ -1,85 +1,73 @@
 Imports System
-Imports System.Collections.Generic
-Imports System.Linq
-Imports System.Reflection
+Imports System.Data
+Imports Newtonsoft.Json.Linq
 
-Public Class ObjectFlattener
-    Public Shared Sub FlattenAndPrint(obj As Object)
-        Dim flattenedObject = Flatten(obj)
-        Dim isPropertyRow As Boolean = True
-        Dim propertyNames As New List(Of String)
-        Dim propertyValues As New List(Of String)
+Public Class JsonToDataTableConverter
+    Public Function ConvertJsonToDataTable(jsonString As String) As DataTable
+        Dim json As JObject = JObject.Parse(jsonString)
+        Dim dt As New DataTable()
 
-        For Each kvp In flattenedObject
-            If isPropertyRow Then
-                propertyNames.Add(kvp.Key)
+        ParseJObject(json, dt, String.Empty)
+
+        Return dt
+    End Function
+
+    Private Sub ParseJObject(obj As JObject, dt As DataTable, parentName As String)
+        For Each property In obj.Properties()
+            Dim columnName As String
+            If String.IsNullOrEmpty(parentName) Then
+                columnName = property.Name
             Else
-                propertyValues.Add(kvp.Value.ToString())
+                columnName = parentName & "." & property.Name
             End If
 
-            isPropertyRow = Not isPropertyRow
+            If TypeOf property.Value Is JValue Then
+                If Not dt.Columns.Contains(columnName) Then
+                    dt.Columns.Add(columnName)
+                End If
+                If dt.Rows.Count = 0 Then
+                    dt.Rows.Add()
+                End If
+                dt.Rows(dt.Rows.Count - 1)(columnName) = CType(property.Value, JValue).Value
+            ElseIf TypeOf property.Value Is JArray Then
+                Dim array As JArray = CType(property.Value, JArray)
+                For Each item In array
+                    If TypeOf item Is JObject Then
+                        Dim newRow As DataRow = dt.NewRow()
+                        dt.Rows.Add(newRow)
+                        ParseJObject(CType(item, JObject), dt, columnName)
+                    Else
+                        If Not dt.Columns.Contains(columnName) Then
+                            dt.Columns.Add(columnName)
+                        End If
+                        Dim newRow As DataRow = dt.NewRow()
+                        newRow(columnName) = CType(item, JValue).Value
+                        dt.Rows.Add(newRow)
+                    End If
+                Next
+            ElseIf TypeOf property.Value Is JObject Then
+                ParseJObject(CType(property.Value, JObject), dt, columnName)
+            End If
         Next
-
-        Console.WriteLine(String.Join(vbTab, propertyNames))
-        Console.WriteLine(String.Join(vbTab, propertyValues))
     End Sub
-
-    Private Shared Function Flatten(obj As Object) As Dictionary(Of String, Object)
-        Return FlattenObject("", obj)
-    End Function
-
-    Private Shared Function FlattenObject(prefix As String, obj As Object) As Dictionary(Of String, Object)
-        Dim result = New Dictionary(Of String, Object)()
-
-        If obj Is Nothing Then
-            result.Add(prefix, Nothing)
-            Return result
-        End If
-
-        If TypeOf obj Is String OrElse TypeOf obj Is ValueType Then
-            result.Add(prefix, obj)
-            Return result
-        End If
-
-        If TypeOf obj Is IEnumerable(Of Object) Then
-            Dim index As Integer = 0
-            For Each item In DirectCast(obj, IEnumerable(Of Object))
-                Dim itemPrefix = $"{prefix}[{index}]"
-                result.Merge(FlattenObject(itemPrefix, item))
-                index += 1
-            Next
-        Else
-            For Each prop As PropertyInfo In obj.GetType().GetProperties()
-                Dim propName = If(String.IsNullOrWhiteSpace(prefix), prop.Name, $"{prefix}.{prop.Name}")
-                Dim propValue = prop.GetValue(obj)
-                result.Merge(FlattenObject(propName, propValue))
-            Next
-        End If
-
-        Return result
-    End Function
 End Class
 
-Module DictionaryExtensions
-    <System.Runtime.CompilerServices.Extension>
-    Public Sub Merge(target As Dictionary(Of String, Object), source As Dictionary(Of String, Object))
-        For Each item In source
-            target(item.Key) = item.Value
+Public Module Program
+    Sub Main()
+        Dim json As String = "..." ' Your JSON string
+        Dim converter As New JsonToDataTableConverter()
+        Dim dt As DataTable = converter.ConvertJsonToDataTable(json)
+
+        ' Print the DataTable for demonstration
+        For Each column As DataColumn In dt.Columns
+            Console.Write(column.ColumnName & vbTab)
+        Next
+        Console.WriteLine()
+        For Each row As DataRow In dt.Rows
+            For Each column As DataColumn In dt.Columns
+                Console.Write(row(column) & vbTab)
+            Next
+            Console.WriteLine()
         Next
     End Sub
-End Module
-
-Sub Main()
-    Dim complexObject = New With {
-        .Name = "John",
-        .Age = 30,
-        .Address = New With {
-            .Street = "123 Main St",
-            .City = "Sample City"
-        },
-        .Hobbies = New String() {"Reading", "Hiking"}
-    }
-
-    ObjectFlattener.FlattenAndPrint(complexObject)
-End Sub
 End Module
