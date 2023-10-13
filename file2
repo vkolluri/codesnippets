@@ -1,14 +1,15 @@
+Imports Newtonsoft.Json.Linq
 Imports System
 Imports System.Collections.Generic
 Imports System.Data
-Imports Newtonsoft.Json.Linq
+Imports System.Linq
 
 Namespace JsonToDataTable
     Class Program
         Private Shared Sub Main(ByVal args As String())
             Dim json As String = _
-            Dim jsonObj As JObject = JObject.Parse("{ ""transactions"": " & json & "}")
-            Dim dataTable = GenerateDataTable(jsonObj)
+            Dim parsedJson As JObject = JObject.Parse("{ ""transactions"": " & json & "}")
+            Dim dataTable = GenerateDataTable(parsedJson)
 
             For Each column As DataColumn In dataTable.Columns
                 Console.Write(column.ColumnName & vbTab)
@@ -26,64 +27,57 @@ Namespace JsonToDataTable
             Next
         End Sub
 
-        Private Shared Function GenerateDataTable(ByVal jsonObj As JObject) As DataTable
+        Private Shared Function GenerateDataTable(ByVal json As JObject) As DataTable
             Dim dataTable = New DataTable()
+            Dim allProperties = New HashSet(Of String)()
 
-            For Each pair In CType(jsonObj("transactions")(0), JObject)
-                FlattenJToken(pair.Key, pair.Value, dataTable, "")
+            For Each transaction In json("transactions")
+                Dim properties = FindAllProperties(transaction)
+                allProperties.UnionWith(properties)
             Next
 
-            For Each transaction In jsonObj("transactions")
-                Dim dr As DataRow = dataTable.NewRow()
-                FillRowData("", transaction.First, dr)
-                dataTable.Rows.Add(dr)
+            For Each [property] In allProperties
+                dataTable.Columns.Add([property])
+            Next
+
+            For Each transaction In json("transactions")
+                Dim row = dataTable.NewRow()
+
+                For Each [property] In allProperties
+                    Dim token = transaction.SelectToken([property])
+
+                    If token IsNot Nothing Then
+                        row([property]) = token.ToString()
+                    End If
+                Next
+
+                dataTable.Rows.Add(row)
             Next
 
             Return dataTable
         End Function
 
-        Private Shared Sub FlattenJToken(ByVal parentName As String, ByVal token As JToken, ByVal dataTable As DataTable, ByVal prefix As String)
-            Select Case token.Type
-                Case JTokenType.Object
+        Private Shared Function FindAllProperties(ByVal token As JToken, ByVal Optional currentPath As String = "", ByVal Optional properties As HashSet(Of String) = Nothing) As HashSet(Of String)
+            If properties Is Nothing Then
+                properties = New HashSet(Of String)()
+            End If
 
-                    For Each pair In CType(token, JObject)
-                        FlattenJToken(parentName, pair.Value, dataTable, pair.Key & "_")
-                    Next
+            If token.Type = JTokenType.Object Then
 
-                Case JTokenType.Array
-                    Dim jArr = CType(token, JArray)
+                For Each child In token.Children(Of JProperty)()
+                    FindAllProperties(child.Value, $"{currentPath}{child.Name}_", properties)
+                Next
+            ElseIf token.Type = JTokenType.Array Then
+                Dim arrayPath = $"{currentPath}0_"
 
-                    If jArr(0).Type = JTokenType.Object Then
-                        FlattenJToken(parentName, jArr(0), dataTable, prefix)
-                    End If
+                For Each child In token(0).Children(Of JProperty)()
+                    FindAllProperties(child.Value, arrayPath & child.Name & "_", properties)
+                Next
+            Else
+                properties.Add(currentPath.TrimEnd("_"c))
+            End If
 
-                Case Else
-                    Dim colName = parentName & prefix.Substring(0, prefix.Length - 1)
-
-                    If Not dataTable.Columns.Contains(colName) Then
-                        dataTable.Columns.Add(colName)
-                    End If
-            End Select
-        End Sub
-
-        Private Shared Sub FillRowData(ByVal parentName As String, ByVal token As JToken, ByVal dr As DataRow)
-            Select Case token.Type
-                Case JTokenType.Object
-
-                    For Each pair In CType(token, JObject)
-                        FillRowData(parentName, pair.Value, dr)
-                    Next
-
-                Case JTokenType.Array
-                    Dim jArr = CType(token, JArray)
-
-                    If jArr(0).Type = JTokenType.Object Then
-                        FillRowData(parentName, jArr(0), dr)
-                    End If
-
-                Case Else
-                    dr(parentName) = (CType(token, JValue)).Value
-            End Select
-        End Sub
+            Return properties
+        End Function
     End Class
 End Namespace
