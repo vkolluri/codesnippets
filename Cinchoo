@@ -1,35 +1,127 @@
-Imports ChoETL
-Imports System.Collections.Generic
+Imports Newtonsoft.Json.Linq
+Imports System
 Imports System.Data
 
-Module Program
-    Sub Main()
-        Dim json As String = "YOUR_JSON_STRING_HERE"
+Namespace JsonToDataTable
+    Class Program
+        Private Shared Sub Main(ByVal args As String())
+            Dim json As String = "{
+                'people': [
+                    {
+                        'id': 1,
+                        'name': 'John',
+                        'addresses': [
+                            {'city': 'New York', 'state': 'NY'},
+                            {'city': 'Los Angeles', 'state': 'CA'}
+                        ]
+                    },
+                    {
+                        'id': 2,
+                        'name': 'Jane',
+                        'addresses': [
+                            {'city': 'Chicago', 'state': 'IL'},
+                            {'city': 'Miami', 'state': 'FL'}
+                        ]
+                    }
+                ]
+            }"
+            Dim dataTable As DataTable = ConvertJsonToDataTable(json, "people")
 
-        GetType(ChoJSONReader).GetAssemblyVersion().Print()
-
-        Using r = ChoJSONReader.LoadText(json).With(Function(c) c.FlattenNode = True).With(Function(c) c.FlattenByNodeName = "reportDetails")
-            Dim dt As DataTable = r.AsDataTable()
-
-            ' Example mappings (customize according to your JSON structure)
-            Dim mappings As New Dictionary(Of String, String) From {
-                {"ParentNode_ChildNode_PropertyName", "SimpleName"}
-                ' Add more mappings as needed
-            }
-
-            ' Rename columns according to mappings
-            For Each col As DataColumn In dt.Columns
-                If mappings.ContainsKey(col.ColumnName) Then
-                    col.ColumnName = mappings(col.ColumnName)
-                End If
+            For Each column As DataColumn In dataTable.Columns
+                Console.Write(column.ColumnName & vbTab)
             Next
 
-            Dim filePath As String = "OutputExcelFile.xlsx"
-            Using w = New ChoExcelWriter(filePath).WithFirstLineHeader()
-                w.Write(dt)
-            End Using
-        End Using
+            Console.WriteLine()
 
-        Console.WriteLine("Data has been exported to Excel file successfully!")
-    End Sub
-End Module
+            For Each row As DataRow In dataTable.Rows
+
+                For Each item In row.ItemArray
+                    Console.Write(item & vbTab)
+                Next
+
+                Console.WriteLine()
+            Next
+        End Sub
+
+        Private Shared Function ConvertJsonToDataTable(ByVal json As String, ByVal arrayPropertyName As String) As DataTable
+            Dim jsonLinq = JObject.Parse(json)
+            Dim linqArray = jsonLinq(arrayPropertyName)
+            If linqArray Is Nothing Then Throw New InvalidOperationException("Provided JSON doesn't contain the array property.")
+            Dim dataTable = New DataTable()
+            Dim firstRow = linqArray.First
+
+            For Each [property] As JProperty In firstRow
+                AddColumns(dataTable, [property])
+            Next
+
+            For Each row In linqArray
+                Dim dataRow = dataTable.NewRow()
+
+                For Each columnData As JProperty In row.Children(Of JProperty)()
+                    PopulateRowData(dataRow, columnData)
+                Next
+
+                dataTable.Rows.Add(dataRow)
+            Next
+
+            Return dataTable
+        End Function
+
+        Private Shared Sub AddColumns(ByVal table As DataTable, ByVal [property] As JProperty, ByVal Optional parentName As String = Nothing)
+            Dim columnName As String = If(parentName IsNot Nothing, $"{parentName}_{[property].Name}", [property].Name)
+
+            Select Case [property].Value.Type
+                Case JTokenType.Array
+                    Dim index As Integer = 0
+
+                    For Each item In [property].Value
+
+                        For Each jProperty In item.Children(Of JProperty)()
+                            AddColumns(table, jProperty, $"{columnName}_{index}")
+                        Next
+
+                        index += 1
+                    Next
+
+                Case JTokenType.Object
+
+                    For Each childProperty In [property].Value.Children(Of JProperty)()
+                        AddColumns(table, childProperty, columnName)
+                    Next
+
+                Case Else
+
+                    If Not table.Columns.Contains(columnName) Then
+                        table.Columns.Add(New DataColumn(columnName, GetType(String)))
+                    End If
+            End Select
+        End Sub
+
+        Private Shared Sub PopulateRowData(ByVal row As DataRow, ByVal [property] As JProperty, ByVal Optional parentName As String = Nothing)
+            Dim columnName As String = If(parentName IsNot Nothing, $"{parentName}_{[property].Name}", [property].Name)
+
+            Select Case [property].Value.Type
+                Case JTokenType.Array
+                    Dim index As Integer = 0
+
+                    For Each item In [property].Value
+
+                        For Each jProperty In item.Children(Of JProperty)()
+                            PopulateRowData(row, jProperty, $"{columnName}_{index}")
+                        Next
+
+                        index += 1
+                    Next
+
+                Case JTokenType.Object
+
+                    For Each childProperty In [property].Value.Children(Of JProperty)()
+                        PopulateRowData(row, childProperty, columnName)
+                    Next
+
+                Case Else
+                    row(columnName) = [property].Value.ToString()
+            End Select
+        End Sub
+    End Class
+End Namespace
