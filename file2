@@ -1,35 +1,98 @@
-Class SurroundingClass
-    Private Shared Sub DiscoverColumnsEnhanced(ByVal dt As DataTable, ByVal token As JToken, ByVal Optional parentName As String = "")
-        Dim jObject As JObject = Nothing, jArray As JArray = Nothing
+Imports Newtonsoft.Json.Linq
+Imports System
+Imports System.Collections.Generic
+Imports System.Data
 
-        If TypeOf token Is JValue Then
-            AddColumn(dt, parentName)
-        ElseIf CSharpImpl.__Assign(jObject, TryCast(token, JObject)) IsNot Nothing Then
+Namespace JsonToDataTable
+    Class Program
+        Private Shared Sub Main()
+            Dim json As String = "{...}"
+            Dim token = JToken.Parse(json)
+            Dim dataTable = GenerateDataTable(token("transactions"))
+        End Sub
 
-            For Each [property] In jObject.Properties()
-                DiscoverColumnsEnhanced(dt, [property].Value, Concat(parentName, [property].Name))
+        Private Shared Function GenerateDataTable(ByVal token As JToken) As DataTable
+            Dim dataTable = New DataTable()
+
+            For Each child In token.Children()
+                DiscoverColumnsEnhanced(dataTable, child)
             Next
-        ElseIf CSharpImpl.__Assign(jArray, TryCast(token, JArray)) IsNot Nothing Then
-            Dim allProperties = New HashSet(Of String)()
 
-            For Each child In jArray.Children(Of JObject)()
-
-                For Each [property] In child.Properties()
-                    allProperties.Add([property].Name)
-                Next
-            Next
-
-            For Each propName In allProperties
-                AddColumn(dt, Concat(parentName, propName))
-            Next
-        End If
-    End Sub
-
-    Private Class CSharpImpl
-        <Obsolete("Please refactor calling code to use normal Visual Basic assignment")>
-        Shared Function __Assign(Of T)(ByRef target As T, value As T) As T
-            target = value
-            Return value
+            PopulateDataTable(dataTable, token)
+            Return dataTable
         End Function
+
+        Private Shared Sub DiscoverColumnsEnhanced(ByVal dt As DataTable, ByVal token As JToken, ByVal Optional parentName As String = "")
+            Dim jObject As JObject = Nothing, jArray As JArray = Nothing
+
+            If TypeOf token Is JValue Then
+                AddColumn(dt, parentName)
+            ElseIf CSharpImpl.__Assign(jObject, TryCast(token, JObject)) IsNot Nothing Then
+
+                For Each [property] In jObject.Properties()
+                    DiscoverColumnsEnhanced(dt, [property].Value, Concat(parentName, [property].Name))
+                Next
+            ElseIf CSharpImpl.__Assign(jArray, TryCast(token, JArray)) IsNot Nothing Then
+                Dim allProperties = New HashSet(Of String)()
+
+                For Each child In jArray.Children(Of JObject)()
+
+                    For Each [property] In child.Properties()
+                        allProperties.Add([property].Name)
+                    Next
+                Next
+
+                For Each propName In allProperties
+                    DiscoverColumnsEnhanced(dt, jArray.First(propName), Concat(parentName, propName))
+                Next
+            End If
+        End Sub
+
+        Private Shared Sub AddColumn(ByVal dt As DataTable, ByVal columnName As String)
+            If Not dt.Columns.Contains(columnName) Then
+                dt.Columns.Add(columnName)
+            End If
+        End Sub
+
+        Private Shared Function Concat(ByVal parentName As String, ByVal propName As String) As String
+            Return If(String.IsNullOrEmpty(parentName), propName, $"{parentName}_{propName}")
+        End Function
+
+        Private Shared Sub PopulateDataTable(ByVal dt As DataTable, ByVal token As JToken)
+            For Each child In token.Children()
+                Dim row = dt.NewRow()
+                PopulateRow(row, child)
+                dt.Rows.Add(row)
+            Next
+        End Sub
+
+        Private Shared Sub PopulateRow(ByVal row As DataRow, ByVal token As JToken, ByVal Optional parentName As String = "")
+            Dim jValue As JValue = Nothing, jObject As JObject = Nothing, jArray As JArray = Nothing
+
+            If CSharpImpl.__Assign(jValue, TryCast(token, JValue)) IsNot Nothing Then
+                row(parentName) = jValue.Value
+            ElseIf CSharpImpl.__Assign(jObject, TryCast(token, JObject)) IsNot Nothing Then
+
+                For Each [property] In jObject.Properties()
+                    PopulateRow(row, [property].Value, Concat(parentName, [property].Name))
+                Next
+            ElseIf CSharpImpl.__Assign(jArray, TryCast(token, JArray)) IsNot Nothing Then
+
+                For Each child In jArray.Children(Of JObject)()
+
+                    For Each [property] In child.Properties()
+                        PopulateRow(row, child([property].Name), Concat(parentName, [property].Name))
+                    Next
+                Next
+            End If
+        End Sub
+
+        Private Class CSharpImpl
+            <Obsolete("Please refactor calling code to use normal Visual Basic assignment")>
+            Shared Function __Assign(Of T)(ByRef target As T, value As T) As T
+                target = value
+                Return value
+            End Function
+        End Class
     End Class
-End Class
+End Namespace
