@@ -1,70 +1,89 @@
-Private Function DeserializeToDataTable(ByVal jsource As String)
-    Dim JRootObject = JObject.Parse(jsource)
-    Dim Children = JRootObject.SelectTokens("$..data.*").ToArray
-    Dim Records = Children.OfType(Of JObject).ToArray
-    Dim dicList As New List(Of Dictionary(Of String, Object))
-    For Each rec In Records
-        dicList.Add(DeserializeToDictionary(rec))
-    Next
-    Dim fieldnames = dicList.SelectMany(Function(d) d.Keys).Distinct.ToArray
-    Dim dt As New DataTable
-    For Each fieldname In fieldnames
-        dt.Columns.Add(fieldname, GetType(Object))
-    Next
-    Dim row As DataRow
-    For Each dic In dicList
-        row = dt.NewRow
-        For Each kvp In dic
-            row.SetField(kvp.Key, kvp.Value)
-        Next
-        dt.Rows.Add(row)
-    Next
-    Return dt
-End Function
+Imports System
+Imports System.Collections.Generic
+Imports System.Data
+Imports Newtonsoft.Json.Linq
 
-Private Function DeserializeToDictionary(ByVal json_object As JObject) As Dictionary(Of String, Object)
-    Dim dic = New Dictionary(Of String, Object)
-    For Each field In json_object.Properties
-        Select Case field.Value.Type
-            Case JTokenType.Array
-                Dim subobject = New JObject
-                Dim item = 0
-                For Each token In field.Value
-                    subobject("item" & item) = token
-                    item += 1
+Namespace JsonToDataTable
+    Class Program
+        Private Shared Sub Main(ByVal args As String())
+            Dim json As String = _
+            Dim jsonObj As JObject = JObject.Parse("{ ""transactions"": " & json & "}")
+            Dim dataTable = GenerateDataTable(jsonObj)
+
+            For Each column As DataColumn In dataTable.Columns
+                Console.Write(column.ColumnName & vbTab)
+            Next
+
+            Console.WriteLine()
+
+            For Each row As DataRow In dataTable.Rows
+
+                For i = 0 To dataTable.Columns.Count - 1
+                    Console.Write(row(i) & vbTab)
                 Next
-                Dim subdic = DeserializeToDictionary(subobject)
-                For Each kvp In subdic
-                    dic(kvp.Key) = kvp.Value
-                Next
-            Case JTokenType.Boolean
-                dic(field.Name) = field.Value.ToObject(Of Boolean)
-            Case JTokenType.Bytes
-                dic(field.Name) = field.Value.ToObject(Of Byte())
-            Case JTokenType.Date
-                dic(field.Name) = field.Value.ToObject(Of Date)
-            Case JTokenType.Float
-                dic(field.Name) = field.Value.ToObject(Of Double)
-            Case JTokenType.Guid
-                dic(field.Name) = field.Value.ToObject(Of Guid)
-            Case JTokenType.Integer
-                dic(field.Name) = field.Value.ToObject(Of Integer)
-            Case JTokenType.Object
-                Dim subdic = DeserializeToDictionary(field.Value)
-                For Each kvp In subdic
-                    dic(kvp.Key) = kvp.Value
-                Next
-            Case JTokenType.String
-                Try
-                    dic(field.Name) = field.Value.ToObject(Of String)
-                Catch ex As Exception
-                    dic(field.Name) = field.Value.ToObject(Of Object)
-                End Try
-            Case JTokenType.TimeSpan
-                dic(field.Name) = field.Value.ToObject(Of TimeSpan)
-            Case Else
-                dic(field.Name) = field.Value.ToString
-        End Select
-    Next
-    Return dic
-End Function
+
+                Console.WriteLine()
+            Next
+        End Sub
+
+        Private Shared Function GenerateDataTable(ByVal jsonObj As JObject) As DataTable
+            Dim dataTable = New DataTable()
+
+            For Each pair In CType(jsonObj("transactions")(0), JObject)
+                FlattenJToken(pair.Key, pair.Value, dataTable, "")
+            Next
+
+            For Each transaction In jsonObj("transactions")
+                Dim dr As DataRow = dataTable.NewRow()
+                FillRowData("", transaction.First, dr)
+                dataTable.Rows.Add(dr)
+            Next
+
+            Return dataTable
+        End Function
+
+        Private Shared Sub FlattenJToken(ByVal parentName As String, ByVal token As JToken, ByVal dataTable As DataTable, ByVal prefix As String)
+            Select Case token.Type
+                Case JTokenType.Object
+
+                    For Each pair In CType(token, JObject)
+                        FlattenJToken(parentName, pair.Value, dataTable, pair.Key & "_")
+                    Next
+
+                Case JTokenType.Array
+                    Dim jArr = CType(token, JArray)
+
+                    If jArr(0).Type = JTokenType.Object Then
+                        FlattenJToken(parentName, jArr(0), dataTable, prefix)
+                    End If
+
+                Case Else
+                    Dim colName = parentName & prefix.Substring(0, prefix.Length - 1)
+
+                    If Not dataTable.Columns.Contains(colName) Then
+                        dataTable.Columns.Add(colName)
+                    End If
+            End Select
+        End Sub
+
+        Private Shared Sub FillRowData(ByVal parentName As String, ByVal token As JToken, ByVal dr As DataRow)
+            Select Case token.Type
+                Case JTokenType.Object
+
+                    For Each pair In CType(token, JObject)
+                        FillRowData(parentName, pair.Value, dr)
+                    Next
+
+                Case JTokenType.Array
+                    Dim jArr = CType(token, JArray)
+
+                    If jArr(0).Type = JTokenType.Object Then
+                        FillRowData(parentName, jArr(0), dr)
+                    End If
+
+                Case Else
+                    dr(parentName) = (CType(token, JValue)).Value
+            End Select
+        End Sub
+    End Class
+End Namespace
