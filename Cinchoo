@@ -1,127 +1,63 @@
 Imports Newtonsoft.Json.Linq
 Imports System
 Imports System.Data
+Imports System.Linq
 
 Namespace JsonToDataTable
     Class Program
         Private Shared Sub Main(ByVal args As String())
-            Dim json As String = "{
-                'people': [
-                    {
-                        'id': 1,
-                        'name': 'John',
-                        'addresses': [
-                            {'city': 'New York', 'state': 'NY'},
-                            {'city': 'Los Angeles', 'state': 'CA'}
-                        ]
-                    },
-                    {
-                        'id': 2,
-                        'name': 'Jane',
-                        'addresses': [
-                            {'city': 'Chicago', 'state': 'IL'},
-                            {'city': 'Miami', 'state': 'FL'}
-                        ]
-                    }
-                ]
-            }"
-            Dim dataTable As DataTable = ConvertJsonToDataTable(json, "people")
-
-            For Each column As DataColumn In dataTable.Columns
-                Console.Write(column.ColumnName & vbTab)
-            Next
-
-            Console.WriteLine()
-
-            For Each row As DataRow In dataTable.Rows
-
-                For Each item In row.ItemArray
-                    Console.Write(item & vbTab)
-                Next
-
-                Console.WriteLine()
-            Next
+            Dim json As String = "YourComplexJsonHere"
+            Dim jObject As JObject = JObject.Parse(json)
+            Dim dataTable As DataTable = FlattenJObjectToDataTable(jObject)
         End Sub
 
-        Private Shared Function ConvertJsonToDataTable(ByVal json As String, ByVal arrayPropertyName As String) As DataTable
-            Dim jsonLinq = JObject.Parse(json)
-            Dim linqArray = jsonLinq(arrayPropertyName)
-            If linqArray Is Nothing Then Throw New InvalidOperationException("Provided JSON doesn't contain the array property.")
-            Dim dataTable = New DataTable()
-            Dim firstRow = linqArray.First
-
-            For Each [property] As JProperty In firstRow
-                AddColumns(dataTable, [property])
-            Next
-
-            For Each row In linqArray
-                Dim dataRow = dataTable.NewRow()
-
-                For Each columnData As JProperty In row.Children(Of JProperty)()
-                    PopulateRowData(dataRow, columnData)
-                Next
-
-                dataTable.Rows.Add(dataRow)
-            Next
-
+        Private Shared Function FlattenJObjectToDataTable(ByVal jObject As JObject) As DataTable
+            Dim dataTable As DataTable = New DataTable()
+            FlattenTokenToDataTable(jObject, dataTable, "")
             Return dataTable
         End Function
 
-        Private Shared Sub AddColumns(ByVal table As DataTable, ByVal [property] As JProperty, ByVal Optional parentName As String = Nothing)
-            Dim columnName As String = If(parentName IsNot Nothing, $"{parentName}_{[property].Name}", [property].Name)
-
-            Select Case [property].Value.Type
-                Case JTokenType.Array
-                    Dim index As Integer = 0
-
-                    For Each item In [property].Value
-
-                        For Each jProperty In item.Children(Of JProperty)()
-                            AddColumns(table, jProperty, $"{columnName}_{index}")
-                        Next
-
-                        index += 1
-                    Next
-
+        Private Shared Sub FlattenTokenToDataTable(ByVal token As JToken, ByVal dataTable As DataTable, ByVal prefix As String)
+            Select Case token.Type
                 Case JTokenType.Object
 
-                    For Each childProperty In [property].Value.Children(Of JProperty)()
-                        AddColumns(table, childProperty, columnName)
+                    For Each prop In token.Children(Of JProperty)()
+                        FlattenTokenToDataTable(prop.Value, dataTable, Join(prefix, prop.Name))
+                    Next
+
+                Case JTokenType.Array
+                    Dim array = TryCast(token, JArray)
+
+                    For i As Integer = 0 To array.Count - 1
+                        FlattenTokenToDataTable(array(i), dataTable, Join(prefix, i.ToString()))
                     Next
 
                 Case Else
 
-                    If Not table.Columns.Contains(columnName) Then
-                        table.Columns.Add(New DataColumn(columnName, GetType(String)))
+                    If Not dataTable.Columns.Contains(prefix) Then
+                        dataTable.Columns.Add(prefix)
                     End If
+
+                    Dim row As DataRow
+
+                    If dataTable.Rows.Count <= 0 Then
+                        row = dataTable.NewRow()
+                        dataTable.Rows.Add(row)
+                    Else
+                        row = dataTable.Rows(dataTable.Rows.Count - 1)
+
+                        If row(prefix) IsNot Nothing AndAlso row(prefix) <> DBNull.Value Then
+                            row = dataTable.NewRow()
+                            dataTable.Rows.Add(row)
+                        End If
+                    End If
+
+                    row(prefix) = token.ToString()
             End Select
         End Sub
 
-        Private Shared Sub PopulateRowData(ByVal row As DataRow, ByVal [property] As JProperty, ByVal Optional parentName As String = Nothing)
-            Dim columnName As String = If(parentName IsNot Nothing, $"{parentName}_{[property].Name}", [property].Name)
-
-            Select Case [property].Value.Type
-                Case JTokenType.Array
-                    Dim index As Integer = 0
-
-                    For Each item In [property].Value
-
-                        For Each jProperty In item.Children(Of JProperty)()
-                            PopulateRowData(row, jProperty, $"{columnName}_{index}")
-                        Next
-
-                        index += 1
-                    Next
-
-                Case JTokenType.Object
-
-                    For Each childProperty In [property].Value.Children(Of JProperty)()
-                        PopulateRowData(row, childProperty, columnName)
-                    Next
-
-                Case Else
-                    row(columnName) = [property].Value.ToString()
-            End Select
-        End Sub
+        Private Shared Function Join(ByVal prefix As String, ByVal name As String) As String
+            Return If(String.IsNullOrEmpty(prefix), name, $"{prefix}_{name}")
+        End Function
     End Class
 End Namespace
