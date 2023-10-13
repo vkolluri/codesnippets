@@ -1,83 +1,35 @@
-Imports Newtonsoft.Json.Linq
-Imports System
-Imports System.Collections.Generic
-Imports System.Data
-Imports System.Linq
+Class SurroundingClass
+    Private Shared Sub DiscoverColumnsEnhanced(ByVal dt As DataTable, ByVal token As JToken, ByVal Optional parentName As String = "")
+        Dim jObject As JObject = Nothing, jArray As JArray = Nothing
 
-Namespace JsonToDataTable
-    Class Program
-        Private Shared Sub Main(ByVal args As String())
-            Dim json As String = _
-            Dim parsedJson As JObject = JObject.Parse("{ ""transactions"": " & json & "}")
-            Dim dataTable = GenerateDataTable(parsedJson)
+        If TypeOf token Is JValue Then
+            AddColumn(dt, parentName)
+        ElseIf CSharpImpl.__Assign(jObject, TryCast(token, JObject)) IsNot Nothing Then
 
-            For Each column As DataColumn In dataTable.Columns
-                Console.Write(column.ColumnName & vbTab)
+            For Each [property] In jObject.Properties()
+                DiscoverColumnsEnhanced(dt, [property].Value, Concat(parentName, [property].Name))
             Next
-
-            Console.WriteLine()
-
-            For Each row As DataRow In dataTable.Rows
-
-                For i = 0 To dataTable.Columns.Count - 1
-                    Console.Write(row(i) & vbTab)
-                Next
-
-                Console.WriteLine()
-            Next
-        End Sub
-
-        Private Shared Function GenerateDataTable(ByVal json As JObject) As DataTable
-            Dim dataTable = New DataTable()
+        ElseIf CSharpImpl.__Assign(jArray, TryCast(token, JArray)) IsNot Nothing Then
             Dim allProperties = New HashSet(Of String)()
 
-            For Each transaction In json("transactions")
-                Dim properties = FindAllProperties(transaction)
-                allProperties.UnionWith(properties)
+            For Each child In jArray.Children(Of JObject)()
+
+                For Each [property] In child.Properties()
+                    allProperties.Add([property].Name)
+                Next
             Next
 
-            For Each [property] In allProperties
-                dataTable.Columns.Add([property])
+            For Each propName In allProperties
+                AddColumn(dt, Concat(parentName, propName))
             Next
+        End If
+    End Sub
 
-            For Each transaction In json("transactions")
-                Dim row = dataTable.NewRow()
-
-                For Each [property] In allProperties
-                    Dim token = transaction.SelectToken([property])
-
-                    If token IsNot Nothing Then
-                        row([property]) = token.ToString()
-                    End If
-                Next
-
-                dataTable.Rows.Add(row)
-            Next
-
-            Return dataTable
-        End Function
-
-        Private Shared Function FindAllProperties(ByVal token As JToken, ByVal Optional currentPath As String = "", ByVal Optional properties As HashSet(Of String) = Nothing) As HashSet(Of String)
-            If properties Is Nothing Then
-                properties = New HashSet(Of String)()
-            End If
-
-            If token.Type = JTokenType.Object Then
-
-                For Each child In token.Children(Of JProperty)()
-                    FindAllProperties(child.Value, $"{currentPath}{child.Name}_", properties)
-                Next
-            ElseIf token.Type = JTokenType.Array Then
-                Dim arrayPath = $"{currentPath}0_"
-
-                For Each child In token(0).Children(Of JProperty)()
-                    FindAllProperties(child.Value, arrayPath & child.Name & "_", properties)
-                Next
-            Else
-                properties.Add(currentPath.TrimEnd("_"c))
-            End If
-
-            Return properties
+    Private Class CSharpImpl
+        <Obsolete("Please refactor calling code to use normal Visual Basic assignment")>
+        Shared Function __Assign(Of T)(ByRef target As T, value As T) As T
+            target = value
+            Return value
         End Function
     End Class
-End Namespace
+End Class
