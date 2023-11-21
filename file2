@@ -1,100 +1,69 @@
-Namespace JsonToDataTable
-    Class Program
-        Private Shared Sub Main()
-            Dim json As String = "{...}"
-            Dim token = JToken.Parse(json)
-            Dim dataTable = GenerateDataTable(token("authorizedPersons"))
-        End Sub
+using System;
+using System.Data.SqlClient;
+using System.Threading.Tasks;
+using System.Threading.Tasks.Dataflow;
 
-        Private Shared Function GenerateDataTable(ByVal token As JToken) As DataTable
-            Dim dataTable = New DataTable()
+class Program
+{
+    static async Task Main(string[] args)
+    {
+        // Connection strings for source and destination databases
+        string sourceConnectionString = "YourSourceDatabaseConnectionString";
+        string destinationConnectionString = "YourDestinationDatabaseConnectionString";
 
-            For Each child In token.Children()
-                DiscoverColumnsEnhanced(dataTable, child)
-            Next
+        // SQL query to read data from source
+        string sourceQuery = "SELECT * FROM SourceTable";
 
-            PopulateDataTable(dataTable, token)
-            Return dataTable
-        End Function
+        // TPL Dataflow block for reading data
+        var readBlock = new TransformBlock<int, YourDataType>(
+            async _ =>
+            {
+                using (var sourceConnection = new SqlConnection(sourceConnectionString))
+                {
+                    var command = new SqlCommand(sourceQuery, sourceConnection);
+                    await sourceConnection.OpenAsync();
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        // Read data and transform into your data type
+                        // For example, read each row and create an object of YourDataType
+                        // return that object
+                    }
+                }
+                return new YourDataType(); // Replace with actual data read
+            },
+            new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = 1 }); // Adjust parallelism as needed
 
-        Private Shared Sub DiscoverColumnsEnhanced(ByVal dt As DataTable, ByVal token As JToken, ByVal Optional parentName As String = "")
-            Dim jObject As JObject = Nothing, jArray As JArray = Nothing
+        // TPL Dataflow block for writing data
+        var writeBlock = new ActionBlock<YourDataType>(
+            async data =>
+            {
+                using (var destinationConnection = new SqlConnection(destinationConnectionString))
+                {
+                    // Prepare your insert command
+                    var command = new SqlCommand("INSERT INTO DestinationTable (...) VALUES (...)", destinationConnection);
+                    // Set parameters for the command based on 'data'
 
-            If TypeOf token Is JValue Then
-                AddColumn(dt, parentName)
-            ElseIf CSharpImpl.__Assign(jObject, TryCast(token, JObject)) IsNot Nothing Then
+                    await destinationConnection.OpenAsync();
+                    await command.ExecuteNonQueryAsync();
+                }
+            },
+            new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = 4 }); // Adjust parallelism as needed
 
-                For Each [property] In jObject.Properties()
-                    DiscoverColumnsEnhanced(dt, [property].Value, Concat(parentName, [property].Name))
-                Next
-            ElseIf CSharpImpl.__Assign(jArray, TryCast(token, JArray)) IsNot Nothing Then
-                Dim allProperties = New HashSet(Of String)()
+        // Link the blocks
+        readBlock.LinkTo(writeBlock, new DataflowLinkOptions { PropagateCompletion = true });
 
-                For Each child In jArray.Children(Of JObject)()
+        // Start the dataflow process
+        readBlock.Post(0); // Posting 0 just to trigger the read in this example
 
-                    For Each [property] In child.Properties()
-                        allProperties.Add([property].Name)
-                    Next
-                Next
+        // Mark the head of the pipeline as complete
+        readBlock.Complete();
 
-                For Each propName In allProperties
-                    DiscoverColumnsEnhanced(dt, jArray.First(propName), Concat(parentName, propName))
-                Next
-            End If
-        End Sub
+        // Wait for the last block in the pipeline to process all messages
+        await writeBlock.Completion;
+    }
+}
 
-        Private Shared Sub AddColumn(ByVal dt As DataTable, ByVal columnName As String)
-            If Not dt.Columns.Contains(columnName) Then
-                dt.Columns.Add(columnName)
-            End If
-        End Sub
-
-        Private Shared Function Concat(ByVal parentName As String, ByVal propName As String) As String
-            Return If(String.IsNullOrEmpty(parentName), propName, $"{parentName}_{propName}")
-        End Function
-
-        Private Shared Sub PopulateDataTable(ByVal dt As DataTable, ByVal token As JToken)
-            For Each child In token.Children()
-                Dim row = dt.NewRow()
-                PopulateRow(row, child)
-                dt.Rows.Add(row)
-            Next
-        End Sub
-
-        Private Shared Sub PopulateRow(ByVal row As DataRow, ByVal token As JToken, ByVal Optional parentName As String = "")
-            Dim jValue As JValue = Nothing, jObject As JObject = Nothing, jArray As JArray = Nothing
-
-            If CSharpImpl.__Assign(jValue, TryCast(token, JValue)) IsNot Nothing Then
-                row(parentName) = jValue.Value
-            ElseIf CSharpImpl.__Assign(jObject, TryCast(token, JObject)) IsNot Nothing Then
-
-                For Each [property] In jObject.Properties()
-                    PopulateRow(row, [property].Value, Concat(parentName, [property].Name))
-                Next
-            ElseIf CSharpImpl.__Assign(jArray, TryCast(token, JArray)) IsNot Nothing Then
-
-                For i As Integer = 0 To jArray.Count - 1
-
-                    If TypeOf jArray(i) Is JObject Then
-                        Dim jObject = CType(jArray(i), JObject)
-
-                        For Each [property] In jObject.Properties()
-                            Dim colName = $"{parentName}_{i}_{[property].Name}"
-                            PopulateRow(row, [property].Value, colName)
-                        Next
-                    ElseIf TypeOf jArray(i) Is JValue Then
-                        row($"{parentName}_{i}") = (CType(jArray(i), JValue)).Value
-                    End If
-                Next
-            End If
-        End Sub
-
-        Private Class CSharpImpl
-            <Obsolete("Please refactor calling code to use normal Visual Basic assignment")>
-            Shared Function __Assign(Of T)(ByRef target As T, value As T) As T
-                target = value
-                Return value
-            End Function
-        End Class
-    End Class
-End Namespace
+public class YourDataType
+{
+    // Define the properties that map to your data structure
+}
