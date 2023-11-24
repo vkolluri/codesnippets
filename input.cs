@@ -1,81 +1,68 @@
-DECLARE @json NVARCHAR(MAX)
+using System;
+using System.Data;
+using System.Data.SqlClient;
+using System.Threading.Tasks.Dataflow;
 
-SET @json = '...' -- Your JSON string
+class Program
+{
+    static void Main(string[] args)
+    {
+        string sourceConnectionString = "YourSourceConnectionString";
+        string destinationConnectionString = "YourDestinationConnectionString";
+        string query = "SELECT * FROM SourceTable"; // Adjust your query here
+        int batchSize = 10000; // Batch size for reading data
 
--- Parse reportDetails
-SELECT 
-    reportTypeCode,
-    submitTypeCode,
-    reportingEntityNumber,
-    submittingReportingEntityNumber,
-    reportingEntityReportReference,
-    JSON_VALUE(twentyFourHourRule, '$.aggregationTypeCode') AS aggregationTypeCode,
-    JSON_VALUE(twentyFourHourRule, '$.periodStart') AS periodStart,
-    JSON_VALUE(twentyFourHourRule, '$.periodEnd') AS periodEnd,
-    activitySectorCode,
-    reportingEntityContactId
-FROM OPENJSON (@json)
-WITH (
-    reportTypeCode INT '$.reportDetails.reportTypeCode',
-    submitTypeCode INT '$.reportDetails.submitTypeCode',
-    reportingEntityNumber INT '$.reportDetails.reportingEntityNumber',
-    submittingReportingEntityNumber INT '$.reportDetails.submittingReportingEntityNumber',
-    reportingEntityReportReference NVARCHAR(255) '$.reportDetails.reportingEntityReportReference',
-    twentyFourHourRule NVARCHAR(MAX) AS JSON '$.reportDetails.twentyFourHourRule',
-    activitySectorCode INT '$.reportDetails.activitySectorCode',
-    reportingEntityContactId INT '$.reportDetails.reportingEntityContactId'
-)
+        var bufferBlock = new BufferBlock<DataTable>(
+            new DataflowBlockOptions
+            {
+                BoundedCapacity = 2 // Adjust based on memory availability
+            });
 
--- Parse definitions
-SELECT 
-    typeCode,
-    refId,
-    surname,
-    givenName,
-    nameOfEntity,
-    telephoneNumber,
-    dateOfBirth,
-    countryOfResidenceCode,
-    addressTypeCode,
-    occupation,
-    nameOfEmployer
-FROM OPENJSON (@json, '$.definitions')
-WITH (
-    typeCode INT,
-    refId NVARCHAR(255),
-    surname NVARCHAR(255),
-    givenName NVARCHAR(255),
-    nameOfEntity NVARCHAR(255),
-    telephoneNumber NVARCHAR(20),
-    dateOfBirth DATE,
-    countryOfResidenceCode NVARCHAR(10),
-    addressTypeCode INT,
-    occupation NVARCHAR(255),
-    nameOfEmployer NVARCHAR(255)
-)
+        var actionBlock = new ActionBlock<DataTable>(
+            data => BulkInsertData(data, destinationConnectionString),
+            new ExecutionDataflowBlockOptions
+            {
+                MaxDegreeOfParallelism = 1 // To maintain data integrity
+            });
 
--- Parse transactions
-SELECT 
-    reportingEntityLocationId,
-    thresholdIndicator,
-    reportingEntityTransactionReference,
-    dateTimeOfTransaction,
-    methodCode,
-    amount,
-    currencyCode,
-    conductorTypeCode,
-    conductorRefId,
-    dispositionCode
-FROM OPENJSON (@json, '$.transactions')
-WITH (
-    reportingEntityLocationId NVARCHAR(50),
-    thresholdIndicator BIT '$.largeCashTransactionDetails.thresholdIndicator',
-    reportingEntityTransactionReference NVARCHAR(255) '$.largeCashTransactionDetails.reportingEntityTransactionReference',
-    dateTimeOfTransaction DATETIME '$.largeCashTransactionDetails.dateTimeOfTransaction',
-    methodCode INT '$.largeCashTransactionDetails.methodCode',
-    amount MONEY '$.startingActions[0].details.amount',
-    currencyCode NVARCHAR(10) '$.startingActions[0].details.currencyCode',
-    conductorTypeCode INT '$.startingActions[0].conductors[0].typeCode',
-    conductorRefId NVARCHAR(255) '$.startingActions[0].conductors[0].refId',
-    dispositionCode INT '$.completingActions[0].details.dispositionCode'
-)
+        bufferBlock.LinkTo(actionBlock, new DataflowLinkOptions { PropagateCompletion = true });
+
+        // Read and buffer data in batches
+        using (SqlConnection connection = new SqlConnection(sourceConnectionString))
+        {
+            connection.Open();
+            using (SqlCommand command = new SqlCommand(query, connection))
+            {
+                SqlDataAdapter adapter = new SqlDataAdapter(command);
+                DataSet ds = new DataSet();
+                
+                int numberOfRowsRead = 0;
+                do
+                {
+                    ds.Clear();
+                    numberOfRowsRead = adapter.Fill(ds, 0, batchSize, "Table");
+                    if (numberOfRowsRead > 0)
+                    {
+                        bufferBlock.Post(ds.Tables["Table"].Copy());
+                    }
+                } while (numberOfRowsRead == batchSize);
+            }
+        }
+
+        bufferBlock.Complete();
+        actionBlock.Completion.Wait();
+    }
+
+    static void BulkInsertData(DataTable data, string destinationConnectionString)
+    {
+        using (SqlConnection destConnection = new SqlConnection(destinationConnectionString))
+        {
+            using (SqlBulkCopy bulkCopy = new SqlBulkCopy(destConnection))
+            {
+                bulkCopy.DestinationTableName = "DestinationTable"; // Set your destination table name
+                destConnection.Open();
+                bulkCopy.WriteToServer(data);
+            }
+        }
+    }
+}
