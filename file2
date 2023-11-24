@@ -1,4 +1,5 @@
 using System;
+using System.Data;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
 using System.Threading.Tasks.Dataflow;
@@ -7,63 +8,65 @@ class Program
 {
     static async Task Main(string[] args)
     {
-        // Connection strings for source and destination databases
-        string sourceConnectionString = "YourSourceDatabaseConnectionString";
-        string destinationConnectionString = "YourDestinationDatabaseConnectionString";
+        string sourceConnectionString = "YourSourceConnectionString";
+        string destinationConnectionString = "YourDestinationConnectionString";
+        string query = "YourQuery";
 
-        // SQL query to read data from source
-        string sourceQuery = "SELECT * FROM SourceTable";
+        try
+        {
+            // Load data from source
+            DataTable dataTable = await LoadDataFromSourceAsync(sourceConnectionString, query);
 
-        // TPL Dataflow block for reading data
-        var readBlock = new TransformBlock<int, YourDataType>(
-            async _ =>
-            {
-                using (var sourceConnection = new SqlConnection(sourceConnectionString))
-                {
-                    var command = new SqlCommand(sourceQuery, sourceConnection);
-                    await sourceConnection.OpenAsync();
-                    using (var reader = await command.ExecuteReaderAsync())
-                    {
-                        // Read data and transform into your data type
-                        // For example, read each row and create an object of YourDataType
-                        // return that object
-                    }
-                }
-                return new YourDataType(); // Replace with actual data read
-            },
-            new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = 1 }); // Adjust parallelism as needed
+            // Define the Dataflow blocks
+            var bufferBlock = new BufferBlock<DataTable>();
+            var actionBlock = new ActionBlock<DataTable>(data => TransferToDestinationAsync(data, destinationConnectionString));
 
-        // TPL Dataflow block for writing data
-        var writeBlock = new ActionBlock<YourDataType>(
-            async data =>
-            {
-                using (var destinationConnection = new SqlConnection(destinationConnectionString))
-                {
-                    // Prepare your insert command
-                    var command = new SqlCommand("INSERT INTO DestinationTable (...) VALUES (...)", destinationConnection);
-                    // Set parameters for the command based on 'data'
+            // Link the blocks
+            bufferBlock.LinkTo(actionBlock, new DataflowLinkOptions { PropagateCompletion = true });
 
-                    await destinationConnection.OpenAsync();
-                    await command.ExecuteNonQueryAsync();
-                }
-            },
-            new ExecutionDataflowBlockOptions { MaxDegreeOfParallelism = 4 }); // Adjust parallelism as needed
+            // Post data to the first block
+            bufferBlock.Post(dataTable);
 
-        // Link the blocks
-        readBlock.LinkTo(writeBlock, new DataflowLinkOptions { PropagateCompletion = true });
+            // Signal completion to the first block
+            bufferBlock.Complete();
 
-        // Start the dataflow process
-        readBlock.Post(0); // Posting 0 just to trigger the read in this example
-
-        // Mark the head of the pipeline as complete
-        readBlock.Complete();
-
-        // Wait for the last block in the pipeline to process all messages
-        await writeBlock.Completion;
+            // Wait for the last block to process all messages
+            await actionBlock.Completion;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error: {ex.Message}");
+        }
     }
-}
 
-public class YourDataType
-{
-    // Define the properties that map to your data structure
+    static async Task<DataTable> LoadDataFromSourceAsync(string connectionString, string query)
+    {
+        DataTable dataTable = new DataTable();
+        using (SqlConnection connection = new SqlConnection(connectionString))
+        {
+            await connection.OpenAsync();
+            using (SqlCommand command = new SqlCommand(query, connection))
+            {
+                using (SqlDataReader reader = await command.ExecuteReaderAsync())
+                {
+                    dataTable.Load(reader);
+                }
+            }
+        }
+        return dataTable;
+    }
+
+    static async Task TransferToDestinationAsync(DataTable data, string connectionString)
+    {
+        using (SqlConnection destConnection = new SqlConnection(connectionString))
+        {
+            using (SqlBulkCopy bulkCopy = new SqlBulkCopy(destConnection))
+            {
+                bulkCopy.DestinationTableName = "DestinationTableName"; // Set your destination table name here
+
+                await destConnection.OpenAsync();
+                await bulkCopy.WriteToServerAsync(data);
+            }
+        }
+    }
 }
