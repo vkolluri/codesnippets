@@ -1,0 +1,16 @@
+# Import dbatools module
+Import-Module dbatools
+
+# Define the source and destination SQL Server instances
+$sourceServer = 'SourceSqlServerInstance'
+$destinationServer = 'DestinationSqlServerInstance'
+
+# Define the source and destination databases
+$sourceDatabase = 'SourceDatabaseName'
+$destinationDatabase = 'DestinationDatabaseName'
+
+# Optional: Define specific tables to copy. If omitted, all tables will be copied
+$tables = @('Table1', 'Table2') # Replace with your table names
+
+# Perform the data copy
+Copy-DbaDbTableData -Source $sourceServer -Destination $destinationServer -SourceDatabase $sourceDatabase -DestinationDatabase $destinationDatabase -Table $tables -Truncate -KeepIdentity
