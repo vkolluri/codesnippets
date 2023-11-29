@@ -214,3 +214,43 @@ function Copy-SQLTable
         #Return value if any
     }
 }
+
+
+
+                                        [string] $sourceInstance = 'MySourceServer\SourceInst'
+[string] $sourceDB = 'MySourceDB'
+[string] $destInstance = $sourceInstance
+[string] $destDB = 'MyTargetDB_ForVendor'
+[bool] $dropTargetTableIfExists = $true
+[bool] $copyIndexes = $true
+[bool] $copyData = $true
+[string[]] $tables = @('dbo.T_STA_DWH_SEC_INDUSTRY_RPT_DQM',
+            'dbo.T_STA_MAS_SEC_INDUSTRY',
+            'dbo.T_STA_DWH_SEC_CALC_RPT_DQM',
+            'dbo.T_STA_MAS_SEC_CALC',
+            'dbo.T_REF_MAS_CLASS_DESC',
+            'dbo.T_REF_MAS_CLASS_MAP',
+            'dbo.T_REF_MAS_CLASSIFICATION_CATEGORY',
+            'dbo.T_DYN_MAS_SAP_ACC_ENTRY',
+            'dbo.T_STA_DWH_SECURITIES_RPT_DQM',
+            'dbo.T_STA_MAS_SEC_CLASS',
+            'dbo.T_STA_MAS_SECURITIES',
+            'dbo.T_REF_MAS_COUNTRY',
+            'dbo.T_REF_MAS_CURRENCY',
+            'dbo.T_STA_BPS_SEC',
+            'dbo.T_STA_BPS_ULT',
+            'dbo.T_STA_DQM_SEC_CALC_CONTROL_RPT',
+            'dbo.T_STA_DQM_SEC_INDUSTRY_CONTROL_RPT',
+            'dbo.T_STA_DQM_SECURITY_CONTROL_RPT',
+            'dbo.T_STA_MAS_ISSUER')
+ 
+Copy-SQLTable `
+    -SourceInstance $sourceInstance `
+    -SourceDB $sourceDB `
+    -DestInstance $destInstance `
+    -DestDB $destDB `
+    -DropTargetTableIfExists: $dropTargetTableIfExists `
+    -CopyIndexes: $copyIndexes `
+    -CopyData: $copyData `
+    -Tables $tables `
+    -Verbose
