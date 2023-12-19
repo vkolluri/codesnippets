@@ -12,3 +12,6 @@ BEGIN
 
     EXEC xp_cmdshell @powershellCommand
 END
+
+
+powershell -Command "& {sqlcmd -S your_server_name -d your_database_name -U your_username -P your_password -Q 'EXEC YourProcedureName' -s',' -W -h -1 | Select-String -Pattern '^(?!_).*' | ConvertFrom-Csv | Export-Csv -Path 'output.csv' -NoTypeInformation -Encoding UTF8}"
