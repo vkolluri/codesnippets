@@ -41,3 +41,22 @@ namespace QuartzConsoleApp
         }
     }
 }
+
+ private static async Task PrintAllJobs(IScheduler scheduler)
+    {
+        var jobGroups = await scheduler.GetJobGroupNames();
+        foreach (var group in jobGroups)
+        {
+            var groupMatcher = Quartz.Impl.Matchers.GroupMatcher<JobKey>.GroupContains(group);
+            var jobKeys = await scheduler.GetJobKeys(groupMatcher);
+            foreach (var jobKey in jobKeys)
+            {
+                var detail = await scheduler.GetJobDetail(jobKey);
+                Console.WriteLine("Job details: ");
+                Console.WriteLine($"Job Name: {detail.Key.Name}");
+                Console.WriteLine($"Job Group: {detail.Key.Group}");
+                Console.WriteLine($"Job Type: {detail.JobType}");
+                // You can also print out other details about the job here
+            }
+        }
+    }
