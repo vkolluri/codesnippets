@@ -104,3 +104,13 @@ public void SetupFileWatchers(IEnumerable<FileWatcherConfig> configs)
         }
     }
 }
+-------
+[Watcher1]
+DirectoryPath=/source/dir1
+Filters=*.txt,*.csv
+StoredProcedure=sp_DataLoad_Dir1
+
+[Watcher2]
+DirectoryPath=/source/dir2
+Filters=*.pdf,*.xlsx
+StoredProcedure=sp_DataLoad_Dir2
