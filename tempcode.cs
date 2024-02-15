@@ -1,76 +1,106 @@
-<?xml version="1.0" encoding="utf-8" ?>
-<configuration>
-  <appSettings>
-    <add key="SmtpHost" value="smtp.example.com"/>
-    <add key="SmtpPort" value="587"/>
-    <add key="FromAddress" value="your-email@example.com"/>
-    <add key="ToAddress" value="recipient-email@example.com"/>
-    <add key="SmtpUsername" value="your-smtp-username"/>
-    <add key="SmtpPassword" value="your-smtp-password"/>
-  </appSettings>
-</configuration>
+using Microsoft.Extensions.Configuration;
+using System;
+using System.Collections.Generic;
 
-using System.Threading.Tasks;
-
-public class EmailNotificationJobListener : JobListenerSupport
+public class FileWatcherConfig
 {
-    private readonly string _smtpHost = ConfigurationManager.AppSettings["SmtpHost"];
-    private readonly int _smtpPort = int.Parse(ConfigurationManager.AppSettings["SmtpPort"]);
-    private readonly string _fromAddress = ConfigurationManager.AppSettings["FromAddress"];
-    private readonly string _toAddress = ConfigurationManager.AppSettings["ToAddress"];
-    private readonly string _smtpUsername = ConfigurationManager.AppSettings["SmtpUsername"];
-    private readonly string _smtpPassword = ConfigurationManager.AppSettings["SmtpPassword"];
+    public string DirectoryPath { get; set; }
+    public List<string> Filters { get; set; }
+    public string StoredProcedure { get; set; }
+}
 
+public class IniConfigurationReader
+{
+    public IConfigurationRoot Configuration { get; set; }
 
-    public EmailNotificationJobListener(string smtpHost, int smtpPort, string fromAddress, string toAddress, string smtpUsername, string smtpPassword)
+    public IniConfigurationReader(string filePath)
     {
-        _smtpHost = smtpHost;
-        _smtpPort = smtpPort;
-        _fromAddress = fromAddress;
-        _toAddress = toAddress;
-        _smtpUsername = smtpUsername;
-        _smtpPassword = smtpPassword;
+        var builder = new ConfigurationBuilder()
+            .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+            .AddIniFile(filePath);
+
+        Configuration = builder.Build();
     }
 
-    public override string Name => "EmailNotificationJobListener";
-
-    public override Task JobWasExecuted(IJobExecutionContext context, JobExecutionException jobException, CancellationToken cancellationToken = default)
+    public IEnumerable<FileWatcherConfig> ReadConfigurations()
     {
-        if (jobException != null)
+        var configs = new List<FileWatcherConfig>();
+        
+        foreach (var section in Configuration.GetChildren())
         {
-            SendErrorEmail(context, jobException);
-        }
-
-        return Task.CompletedTask;
-    }
-
-    private void SendErrorEmail(IJobExecutionContext context, JobExecutionException jobException)
-    {
-        try
-        {
-            using (var smtpClient = new SmtpClient(_smtpHost, _smtpPort))
+            var config = new FileWatcherConfig
             {
-                smtpClient.Credentials = new NetworkCredential(_smtpUsername, _smtpPassword);
-                smtpClient.EnableSsl = true;
-
-                var mailMessage = new MailMessage
-                {
-                    From = new MailAddress(_fromAddress),
-                    Subject = $"Job Error Notification: {context.JobDetail.Key}",
-                    Body = $"An error occurred in job {context.JobDetail.Key}: {jobException.Message}",
-                    IsBodyHtml = false
-                };
-                mailMessage.To.Add(_toAddress);
-
-                smtpClient.Send(mailMessage);
-            }
+                DirectoryPath = section["DirectoryPath"],
+                Filters = new List<string>(section["Filters"].Split(',')),
+                StoredProcedure = section["StoredProcedure"]
+            };
+            
+            configs.Add(config);
         }
-        catch (Exception ex)
+
+        return configs;
+    }
+}
+------
+
+public void SetupFileWatchers(IEnumerable<FileWatcherConfig> configs)
+{
+    foreach (var config in configs)
+    {
+        var watcher = new FileSystemWatcher(config.DirectoryPath)
         {
-            // Handle any errors that occurred during sending email
-            Console.WriteLine($"Failed to send error email: {ex.Message}");
+            IncludeSubdirectories = true,
+            NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite,
+        };
+
+        foreach (var filter in config.Filters)
+        {
+            // Note: FileSystemWatcher supports setting one filter at a time.
+            // You might need separate watchers for each filter or handle it differently.
+            watcher.Filter = filter;
+            watcher.Created += (sender, e) =>
+            {
+                // Schedule Quartz.NET job to process the file and execute the stored procedure
+            };
+
+            watcher.EnableRaisingEvents = true;
         }
     }
 }
+=----------
 
-scheduler.ListenerManager.AddJobListener(emailNotificationListener, EverythingMatcher<JobKey>.AllJobs());
+  public class DirectoryMonitoringSetupJob : IJob
+{
+    public async Task Execute(IJobExecutionContext context)
+    {
+        // Path to your INI configuration file
+        string iniFilePath = "path/to/your/fileWatcherConfig.ini";
+
+        // Create the configuration reader and read configurations
+        var configurationReader = new IniConfigurationReader(iniFilePath);
+        var configs = configurationReader.ReadConfigurations();
+
+        // Setup file watchers based on the read configurations
+        SetupFileWatchers(configs, context.Scheduler);
+    }
+
+    private void SetupFileWatchers(IEnumerable<FileWatcherConfig> configs, IScheduler scheduler)
+    {
+        foreach (var config in configs)
+        {
+            var watcher = new FileSystemWatcher(config.DirectoryPath)
+            {
+                IncludeSubdirectories = true,
+                NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite,
+            };
+
+            watcher.Created += async (sender, e) =>
+            {
+                // Schedule a Quartz.NET job to process the created file
+                // Similar to previous examples, but use `scheduler` to schedule the job
+            };
+
+            watcher.EnableRaisingEvents = true;
+        }
+    }
+}
