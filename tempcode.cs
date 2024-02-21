@@ -1,116 +1,64 @@
-using Microsoft.Extensions.Configuration;
+using Quartz;
+using Quartz.Impl;
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
-public class FileWatcherConfig
+class Program
 {
-    public string DirectoryPath { get; set; }
-    public List<string> Filters { get; set; }
-    public string StoredProcedure { get; set; }
-}
-
-public class IniConfigurationReader
-{
-    public IConfigurationRoot Configuration { get; set; }
-
-    public IniConfigurationReader(string filePath)
+    static async Task Main(string[] args)
     {
-        var builder = new ConfigurationBuilder()
-            .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
-            .AddIniFile(filePath);
+        // Initialize StdSchedulerFactory
+        ISchedulerFactory schedulerFactory = new StdSchedulerFactory();
+        // Get and start a scheduler
+        IScheduler scheduler = await schedulerFactory.GetScheduler();
+        await scheduler.Start();
 
-        Configuration = builder.Build();
-    }
+        // Assuming you have already scheduled some jobs and triggers at this point
 
-    public IEnumerable<FileWatcherConfig> ReadConfigurations()
-    {
-        var configs = new List<FileWatcherConfig>();
-        
-        foreach (var section in Configuration.GetChildren())
+        // Fetch all job details
+        var jobGroups = await scheduler.GetJobGroupNames();
+        var triggerGroups = await scheduler.GetTriggerGroupNames();
+
+        List<JobDetails> jobDetailsList = new List<JobDetails>();
+
+        foreach (var group in jobGroups)
         {
-            var config = new FileWatcherConfig
+            var jobKeys = await scheduler.GetJobKeys(Quartz.Impl.Matchers.GroupMatcher<JobKey>.GroupEquals(group));
+            foreach (var jobKey in jobKeys)
             {
-                DirectoryPath = section["DirectoryPath"],
-                Filters = new List<string>(section["Filters"].Split(',')),
-                StoredProcedure = section["StoredProcedure"]
-            };
-            
-            configs.Add(config);
+                var detail = await scheduler.GetJobDetail(jobKey);
+                var triggers = await scheduler.GetTriggersOfJob(jobKey);
+                foreach (var trigger in triggers)
+                {
+                    jobDetailsList.Add(new JobDetails
+                    {
+                        JobName = jobKey.Name,
+                        JobGroup = jobKey.Group,
+                        TriggerName = trigger.Key.Name,
+                        TriggerGroup = trigger.Key.Group,
+                        TriggerState = await scheduler.GetTriggerState(trigger.Key),
+                        NextFireTime = trigger.GetNextFireTimeUtc()?.LocalDateTime.ToString()
+                    });
+                }
+            }
         }
 
-        return configs;
-    }
-}
-------
-
-public void SetupFileWatchers(IEnumerable<FileWatcherConfig> configs)
-{
-    foreach (var config in configs)
-    {
-        var watcher = new FileSystemWatcher(config.DirectoryPath)
+        // Display job details in a tabular format
+        Console.WriteLine($"{"Job Name",-20} {"Job Group",-20} {"Trigger Name",-20} {"Trigger Group",-20} {"Trigger State",-20} {"Next Fire Time",-20}");
+        foreach (var jobDetail in jobDetailsList)
         {
-            IncludeSubdirectories = true,
-            NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite,
-        };
-
-        foreach (var filter in config.Filters)
-        {
-            // Note: FileSystemWatcher supports setting one filter at a time.
-            // You might need separate watchers for each filter or handle it differently.
-            watcher.Filter = filter;
-            watcher.Created += (sender, e) =>
-            {
-                // Schedule Quartz.NET job to process the file and execute the stored procedure
-            };
-
-            watcher.EnableRaisingEvents = true;
+            Console.WriteLine($"{jobDetail.JobName,-20} {jobDetail.JobGroup,-20} {jobDetail.TriggerName,-20} {jobDetail.TriggerGroup,-20} {jobDetail.TriggerState,-20} {jobDetail.NextFireTime,-20}");
         }
     }
 }
-=----------
 
-  public class DirectoryMonitoringSetupJob : IJob
+class JobDetails
 {
-    public async Task Execute(IJobExecutionContext context)
-    {
-        // Path to your INI configuration file
-        string iniFilePath = "path/to/your/fileWatcherConfig.ini";
-
-        // Create the configuration reader and read configurations
-        var configurationReader = new IniConfigurationReader(iniFilePath);
-        var configs = configurationReader.ReadConfigurations();
-
-        // Setup file watchers based on the read configurations
-        SetupFileWatchers(configs, context.Scheduler);
-    }
-
-    private void SetupFileWatchers(IEnumerable<FileWatcherConfig> configs, IScheduler scheduler)
-    {
-        foreach (var config in configs)
-        {
-            var watcher = new FileSystemWatcher(config.DirectoryPath)
-            {
-                IncludeSubdirectories = true,
-                NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite,
-            };
-
-            watcher.Created += async (sender, e) =>
-            {
-                // Schedule a Quartz.NET job to process the created file
-                // Similar to previous examples, but use `scheduler` to schedule the job
-            };
-
-            watcher.EnableRaisingEvents = true;
-        }
-    }
+    public string JobName { get; set; }
+    public string JobGroup { get; set; }
+    public string TriggerName { get; set; }
+    public string TriggerGroup { get; set; }
+    public TriggerState TriggerState { get; set; }
+    public string NextFireTime { get; set; }
 }
--------
-[Watcher1]
-DirectoryPath=/source/dir1
-Filters=*.txt,*.csv
-StoredProcedure=sp_DataLoad_Dir1
-
-[Watcher2]
-DirectoryPath=/source/dir2
-Filters=*.pdf,*.xlsx
-StoredProcedure=sp_DataLoad_Dir2
