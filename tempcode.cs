@@ -1,62 +1,68 @@
-using Quartz;
 using System;
-using System.Collections.Generic;
+using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
-using IniParser; // Use an INI file parser library
-using IniParser.Model;
 
-public class FileScanJob : IJob
+class Program
 {
-    public async Task Execute(IJobExecutionContext context)
+    static async Task Main(string[] args)
     {
-        var scheduler = context.Scheduler;
-        var fileParser = new FileIniDataParser();
-        IniData data = fileParser.ReadFile("path/to/your/config.ini");
-
-        foreach (var section in data.Sections)
+        FileSystemWatcher watcher = new FileSystemWatcher
         {
-            string jobName = section.SectionName;
-            string jobType = section.Keys["Type"];
-            string cronExpression = section.Keys["CronExpression"];
+            Path = @"C:\path\to\watch",
+            Filter = "*.*"
+        };
 
-            var jobKey = new JobKey(jobName);
-            var jobDetail = JobBuilder.Create(Type.GetType(jobType))
-                                      .WithIdentity(jobKey)
-                                      .Build();
-
-            var trigger = TriggerBuilder.Create()
-                                        .WithIdentity($"{jobName}-trigger")
-                                        .WithCronSchedule(cronExpression)
-                                        .Build();
-
-            // Check if the job already exists
-            if (await scheduler.CheckExists(jobKey))
+        watcher.Created += async (sender, e) =>
+        {
+            Console.WriteLine($"File created: {e.FullPath}");
+            try
             {
-                // Reschedule the job with the new trigger
-                await scheduler.RescheduleJob(new TriggerKey($"{jobName}-trigger"), trigger);
+                await WaitForFileAvailable(e.FullPath, TimeSpan.FromSeconds(10));
+                Console.WriteLine($"File is ready for processing: {e.FullPath}");
+                // Proceed with processing the file
             }
-            else
+            catch (TimeoutException ex)
             {
-                // Schedule the new job with its trigger
-                await scheduler.ScheduleJob(jobDetail, trigger);
+                Console.WriteLine(ex.Message);
+                // Handle the timeout, e.g., log the error or notify someone
             }
+        };
+
+        watcher.EnableRaisingEvents = true;
+
+        Console.WriteLine("Press enter to exit.");
+        Console.ReadLine();
+    }
+
+    static async Task WaitForFileAvailable(string filePath, TimeSpan timeout)
+    {
+        var start = DateTime.UtcNow;
+        while (DateTime.UtcNow - start < timeout)
+        {
+            if (TryOpenFile(filePath))
+            {
+                return; // File is available
+            }
+            await Task.Delay(500); // Wait before trying again
+        }
+        throw new TimeoutException($"File {filePath} is not available after {timeout.TotalSeconds} seconds.");
+    }
+
+    static bool TryOpenFile(string filePath)
+    {
+        try
+        {
+            // Attempt to open the file exclusively.
+            using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            {
+                return true; // Success, the file is not locked and can be processed
+            }
+        }
+        catch (IOException)
+        {
+            // The file is still locked or in use
+            return false;
         }
     }
 }
-
-IScheduler scheduler = await StdSchedulerFactory.GetDefaultScheduler();
-await scheduler.Start();
-
-IJobDetail fileScanJob = JobBuilder.Create<FileScanJob>()
-    .WithIdentity("FileScanJob", "group1")
-    .Build();
-
-ITrigger trigger = TriggerBuilder.Create()
-    .WithIdentity("FileScanJobTrigger", "group1")
-    .StartNow()
-    .WithSimpleSchedule(x => x
-        .WithIntervalInMinutes(10) // Scan every 10 minutes
-        .RepeatForever())
-    .Build();
-
-await scheduler.ScheduleJob(fileScanJob, trigger);
