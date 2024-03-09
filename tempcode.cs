@@ -1,67 +1,83 @@
-using System;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-
-class Program
+public class FileEventAccumulator
 {
-    static async Task Main(string[] args)
+    private readonly List<string> _filePaths = new List<string>();
+    private readonly Timer _timer;
+    private readonly IScheduler _scheduler;
+    private readonly object _lock = new object();
+    private bool _timerStarted = false; // Flag to indicate if the timer has been started
+    private readonly TimeSpan _batchInterval = TimeSpan.FromMinutes(1);
+
+    public FileEventAccumulator(IScheduler scheduler)
     {
-        FileSystemWatcher watcher = new FileSystemWatcher
-        {
-            Path = @"C:\path\to\watch",
-            Filter = "*.*"
-        };
-
-        watcher.Created += async (sender, e) =>
-        {
-            Console.WriteLine($"File created: {e.FullPath}");
-            try
-            {
-                await WaitForFileAvailable(e.FullPath, TimeSpan.FromSeconds(10));
-                Console.WriteLine($"File is ready for processing: {e.FullPath}");
-                // Proceed with processing the file
-            }
-            catch (TimeoutException ex)
-            {
-                Console.WriteLine(ex.Message);
-                // Handle the timeout, e.g., log the error or notify someone
-            }
-        };
-
-        watcher.EnableRaisingEvents = true;
-
-        Console.WriteLine("Press enter to exit.");
-        Console.ReadLine();
+        _scheduler = scheduler;
+        // Timer does not start automatically
+        _timer = new Timer(TimerCallback, null, Timeout.Infinite, Timeout.Infinite);
     }
 
-    static async Task WaitForFileAvailable(string filePath, TimeSpan timeout)
+    public void AddFileEvent(string filePath)
     {
-        var start = DateTime.UtcNow;
-        while (DateTime.UtcNow - start < timeout)
+        lock (_lock)
         {
-            if (TryOpenFile(filePath))
+            _filePaths.Add(filePath);
+            // Start the timer only if it hasn't been started yet
+            if (!_timerStarted)
             {
-                return; // File is available
+                _timer.Change(_batchInterval, Timeout.InfiniteTimeSpan);
+                _timerStarted = true;
             }
-            await Task.Delay(500); // Wait before trying again
         }
-        throw new TimeoutException($"File {filePath} is not available after {timeout.TotalSeconds} seconds.");
     }
 
-    static bool TryOpenFile(string filePath)
+    private void TimerCallback(object state)
+    {
+        List<string> filePathsToProcess = new List<string>();
+        lock (_lock)
+        {
+            if (_filePaths.Count > 0)
+            {
+                filePathsToProcess.AddRange(_filePaths);
+                _filePaths.Clear();
+            }
+            // Reset the flag so the timer can be started again for the next batch
+            _timerStarted = false;
+        }
+
+        // Process available files and requeue unavailable ones
+        ProcessAndRequeueFiles(filePathsToProcess).GetAwaiter().GetResult();
+    }
+
+    private async Task ProcessAndRequeueFiles(List<string> filePaths)
+    {
+        foreach (var filePath in filePaths)
+        {
+            if (IsFileReady(filePath))
+            {
+                Console.WriteLine($"Processing file: {filePath}");
+                // Process the file
+            }
+            else
+            {
+                Console.WriteLine($"Requeuing file (not ready): {filePath}");
+                // Requeue the file for the next batch
+                AddFileEvent(filePath);
+            }
+        }
+        // Trigger any job or action after processing
+    }
+
+    private bool IsFileReady(string filePath)
     {
         try
         {
-            // Attempt to open the file exclusively.
-            using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None))
+            using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.None))
             {
-                return true; // Success, the file is not locked and can be processed
+                // File can be opened for exclusive access
+                return true;
             }
         }
         catch (IOException)
         {
-            // The file is still locked or in use
+            // The file is locked or in use
             return false;
         }
     }
