@@ -1,84 +1,48 @@
-public class FileEventAccumulator
+public class SequentialJobQueue
 {
-    private readonly List<string> _filePaths = new List<string>();
-    private readonly Timer _timer;
+    private readonly ConcurrentQueue<JobDetail> _jobQueue = new ConcurrentQueue<JobDetail>();
+    private readonly ManualResetEvent _newItemEvent = new ManualResetEvent(false);
     private readonly IScheduler _scheduler;
-    private readonly object _lock = new object();
-    private bool _timerStarted = false; // Flag to indicate if the timer has been started
-    private readonly TimeSpan _batchInterval = TimeSpan.FromMinutes(1);
+    private bool _isRunning = true;
 
-    public FileEventAccumulator(IScheduler scheduler)
+    public SequentialJobQueue(IScheduler scheduler)
     {
         _scheduler = scheduler;
-        // Timer does not start automatically
-        _timer = new Timer(TimerCallback, null, Timeout.Infinite, Timeout.Infinite);
+        Task.Run(() => ProcessQueue());
     }
 
-    public void AddFileEvent(string filePath)
+    public void EnqueueJob<TJob>(string taskName) where TJob : IJob
     {
-        lock (_lock)
+        IJobDetail job = JobBuilder.Create<TJob>()
+            .UsingJobData("TaskName", taskName)
+            .Build();
+
+        _jobQueue.Enqueue(new JobDetail { Job = job });
+        _newItemEvent.Set(); // Signal that a new item has been added
+    }
+
+    private void ProcessQueue()
+    {
+        while (_isRunning)
         {
-            _filePaths.Add(filePath);
-            // Start the timer only if it hasn't been started yet
-            if (!_timerStarted)
+            _newItemEvent.WaitOne(); // Wait for an item to be added
+
+            while (_jobQueue.TryDequeue(out JobDetail jobDetail))
             {
-                _timer.Change(_batchInterval, Timeout.InfiniteTimeSpan);
-                _timerStarted = true;
+                _scheduler.TriggerJob(jobDetail.Job.Key).Wait();
             }
+            _newItemEvent.Reset(); // Reset the event until a new item is added
         }
     }
 
-    private void TimerCallback(object state)
+    public void Stop()
     {
-        List<string> filePathsToProcess = new List<string>();
-        lock (_lock)
-        {
-            if (_filePaths.Count > 0)
-            {
-                filePathsToProcess.AddRange(_filePaths);
-                _filePaths.Clear();
-            }
-            // Reset the flag so the timer can be started again for the next batch
-            _timerStarted = false;
-        }
-
-        // Process available files and requeue unavailable ones
-        ProcessAndRequeueFiles(filePathsToProcess).GetAwaiter().GetResult();
+        _isRunning = false;
+        _newItemEvent.Set(); // Ensure we exit the wait state to stop the loop
     }
 
-    private async Task ProcessAndRequeueFiles(List<string> filePaths)
+    private class JobDetail
     {
-        foreach (var filePath in filePaths)
-        {
-            if (IsFileReady(filePath))
-            {
-                Console.WriteLine($"Processing file: {filePath}");
-                // Process the file
-            }
-            else
-            {
-                Console.WriteLine($"Requeuing file (not ready): {filePath}");
-                // Requeue the file for the next batch
-                AddFileEvent(filePath);
-            }
-        }
-        // Trigger any job or action after processing
-    }
-
-    private bool IsFileReady(string filePath)
-    {
-        try
-        {
-            using (var stream = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.None))
-            {
-                // File can be opened for exclusive access
-                return true;
-            }
-        }
-        catch (IOException)
-        {
-            // The file is locked or in use
-            return false;
-        }
+        public IJobDetail Job { get; set; }
     }
 }
