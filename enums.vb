@@ -1,265 +1,265 @@
 Imports System.Runtime.Serialization
 
-Public Enum CurrencyCode
-    <EnumMember(Value:="Canadian Dollar")> CAD
-    <EnumMember(Value:="United States Dollar")> USD
-    <EnumMember(Value:="Andorran Peseta")> ADP
-    <EnumMember(Value:="United Arab Emirates Dirham")> AED
-    <EnumMember(Value:="Afghani")> AFA
-    <EnumMember(Value:="Afghani")> AFN
-    <EnumMember(Value:="Lek")> ALL
-    <EnumMember(Value:="Armenian Dram")> AMD
-    <EnumMember(Value:="Netherlands Antillian Guilder")> ANG
-    <EnumMember(Value:="Kwanza")> AOA
-    <EnumMember(Value:="Kwanza")> AOK
-    <EnumMember(Value:="New Kwanza")> AON
-    <EnumMember(Value:="Argentine Peso")> ARP
-    <EnumMember(Value:="Argentine Peso")> ARS
-    <EnumMember(Value:="Schilling")> ATS
-    <EnumMember(Value:="Australian Dollar")> AUD
-    <EnumMember(Value:="Aruba Florin")> AWF
-    <EnumMember(Value:="Aruban Guilder")> AWG
-    <EnumMember(Value:="Azerbaijanian Manat")> AZM
-    <EnumMember(Value:="Azerbaijan Manat")> AZN
-    <EnumMember(Value:="Convertible Mark")> BAK
-    <EnumMember(Value:="Convert. Marks (Bosnia/Herzegovina)")> BAM
-    <EnumMember(Value:="Barbados Dollar")> BBD
-    <EnumMember(Value:="Taka (Bangladesh)")> BDT
-    <EnumMember(Value:="Belgian Franc (convertible)")> BEC
-    <EnumMember(Value:="Belgian Franc")> BEF
-    <EnumMember(Value:="Belgian Franc (financial)")> BEL
-    <EnumMember(Value:="Lev")> BGL
-    <EnumMember(Value:="Bulgarian Lev")> BGN
-    <EnumMember(Value:="Bahraini Dinar")> BHD
-    <EnumMember(Value:="Burundi Franc")> BIF
-    <EnumMember(Value:="Bermudian Dollar")> BMD
-    <EnumMember(Value:="Brunei Dollar")> BND
-    <EnumMember(Value:="Boliviano")> BOB
-    <EnumMember(Value:="Bolivian Peso")> BOP
-    <EnumMember(Value:="Mvdol (Bolivia)")> BOV
-    <EnumMember(Value:="Cruzeiro")> BRC
-    <EnumMember(Value:="Brazilian Real")> BRL
-    <EnumMember(Value:="Bahamian Dollar")> BSD
-    <EnumMember(Value:="Ngultrum (Bhutan)")> BTN
-    <EnumMember(Value:="Bhutan Rupee")> BTR
-    <EnumMember(Value:="Kyat")> BUK
-    <EnumMember(Value:="Pula (Botswana)")> BWP
-    <EnumMember(Value:="Belarusian Ruble")> BYN
-    <EnumMember(Value:="Belarusian Ruble")> BYR
-    <EnumMember(Value:="Belize Dollar")> BZD
-    <EnumMember(Value:="Congolese Franc")> CDF
-    <EnumMember(Value:="New Zaire")> CDZ
-    <EnumMember(Value:="WIR Euro (Suisse)")> CHE
-    <EnumMember(Value:="Swiss Franc (Liechtenstein)")> CHF
-    <EnumMember(Value:="WIR Franc Switzerland")> CHW
-    <EnumMember(Value:="Unidades de Formento (Chile)")> CLF
-    <EnumMember(Value:="Chilean Peso")> CLP
-    <EnumMember(Value:="Yuan Renminbi (China)")> CNY
-    <EnumMember(Value:="Colombian Peso")> COP
-    <EnumMember(Value:="Unidad de Valor Real (Columbia)")> COU
-    <EnumMember(Value:="Costa Rican Colon")> CRC
-    <EnumMember(Value:="Serbian Dinar")> CSD
-    <EnumMember(Value:="Koruna (Czechoslovakia)")> CSK
-    <EnumMember(Value:="Peso Convertible")> CUC
-    <EnumMember(Value:="Cuban Peso")> CUP
-    <EnumMember(Value:="Cape Verde Escudo")> CVE
-    <EnumMember(Value:="Cyprus Pound")> CYP
-    <EnumMember(Value:="Czech Koruna")> CZK
-    <EnumMember(Value:="Mark der DDR")> DDM
-    <EnumMember(Value:="Deutsche Mark")> DEM
-    <EnumMember(Value:="Djibouti Franc")> DJF
-    <EnumMember(Value:="Danish Krone")> DKK
-    <EnumMember(Value:="Dominican Peso")> DOP
-    <EnumMember(Value:="Algerian Dinar")> DZD
-    <EnumMember(Value:="Sucre")> ECS
-    <EnumMember(Value:="Kroon (Estonia)")> EEK
-    <EnumMember(Value:="Egyptian Pound")> EGP
-    <EnumMember(Value:="Nakfa (Eritrea)")> ERN
-    <EnumMember(Value:="Spanish Peseta")> ESP
-    <EnumMember(Value:="Ethiopian Birr")> ETB
-    <EnumMember(Value:="Euro")> EUR
-    <EnumMember(Value:="Markka")> FIM
-    <EnumMember(Value:="Fiji Dollar")> FJD
-    <EnumMember(Value:="Falkland Islands Pound")> FKP
-    <EnumMember(Value:="French Franc")> FRF
-    <EnumMember(Value:="Pound Sterling (United Kingdom)")> GBP
-    <EnumMember(Value:="Lari (Georgia)")> GEL
-    <EnumMember(Value:="Cedi (Ghana)")> GHC
-    <EnumMember(Value:="Cedi (Ghana)")> GHS
-    <EnumMember(Value:="Gibraltar Pound")> GIP
-    <EnumMember(Value:="Dalasi (Gambia)")> GMD
-    <EnumMember(Value:="Guinean Franc")> GNF
-    <EnumMember(Value:="Syli")> GNS
-    <EnumMember(Value:="Ekwele")> GQE
-    <EnumMember(Value:="Drachma")> GRD
-    <EnumMember(Value:="Quetzal (Guatemala)")> GTQ
-    <EnumMember(Value:="Guinea-Bissau Peso")> GWP
-    <EnumMember(Value:="Guyana Dollar")> GYD
-    <EnumMember(Value:="Hong Kong Dollar")> HKD
-    <EnumMember(Value:="Lempira (Honduras)")> HNL
-    <EnumMember(Value:="Croatian Kuna")> HRK
-    <EnumMember(Value:="Gourde (Haiti)")> HTG
-    <EnumMember(Value:="Forint (Hungary)")> HUF
-    <EnumMember(Value:="Rupiah (Indonesia)")> IDR
-    <EnumMember(Value:="Irish Pound")> IEP
-    <EnumMember(Value:="New Israeli Shekel")> ILS
-    <EnumMember(Value:="Indian Rupee")> INR
-    <EnumMember(Value:="Iraqi Dinar")> IQD
-    <EnumMember(Value:="Iranian Rial")> IRR
-    <EnumMember(Value:="Iceland Krona")> ISK
-    <EnumMember(Value:="Lira")> ITL
-    <EnumMember(Value:="Jamaican Dollar")> JMD
-    <EnumMember(Value:="Jordanian Dinar")> JOD
-    <EnumMember(Value:="Yen (Japan)")> JPY
-    <EnumMember(Value:="Kenyan Shilling")> KES
-    <EnumMember(Value:="Som (Kyrgyzstan)")> KGS
-    <EnumMember(Value:="Riel (Cambodia)")> KHR
-    <EnumMember(Value:="Comorian Franc")> KMF
-    <EnumMember(Value:="North Korean Won")> KPW
-    <EnumMember(Value:="Won (South Korea)")> KRW
-    <EnumMember(Value:="Kuwaiti Dinar")> KWD
-    <EnumMember(Value:="Cayman Islands Dollar")> KYD
-    <EnumMember(Value:="Tenge (Kazakstan)")> KZT
-    <EnumMember(Value:="Lao Kip")> LAK
-    <EnumMember(Value:="Lebanese Pound")> LBP
-    <EnumMember(Value:="Sri Lankan Rupee")> LKR
-    <EnumMember(Value:="Liberian Dollar")> LRD
-    <EnumMember(Value:="Loti (Lesotho)")> LSL
-    <EnumMember(Value:="Maloti")> LSM
-    <EnumMember(Value:="Lithuanian Litas")> LTL
-    <EnumMember(Value:="Luxembourg Franc")> LUF
-    <EnumMember(Value:="Latvian Lat")> LVL
-    <EnumMember(Value:="Libyan Dinar")> LYD
-    <EnumMember(Value:="Moroccan Dirham")> MAD
-    <EnumMember(Value:="Moldovan Leu")> MDL
-    <EnumMember(Value:="Malagasy Ariary (Madagascar)")> MGA
-    <EnumMember(Value:="Malagasy Franc")> MGF
-    <EnumMember(Value:="Denar (Macedonia)")> MKD
-    <EnumMember(Value:="Mali Franc")> MLF
-    <EnumMember(Value:="Kyat (Myanmar)")> MMK
-    <EnumMember(Value:="Tugrik (Mongolia)")> MNT
-    <EnumMember(Value:="Pataca (Macau)")> MOP
-    <EnumMember(Value:="Ouguiya (Mauritania)")> MRO
-    <EnumMember(Value:="Ouguiya")> MRU
-    <EnumMember(Value:="Maltese Lira")> MTL
-    <EnumMember(Value:="Maltese Pound")> MTP
-    <EnumMember(Value:="Mauritian Rupee")> MUR
-    <EnumMember(Value:="Rufiyaa (Maldives)")> MVR
-    <EnumMember(Value:="Malawi Kwacha")> MWK
-    <EnumMember(Value:="Mexcian Peso")> MXN
-    <EnumMember(Value:="Mexican Peso")> MXP
-    <EnumMember(Value:="Mexican Unidad de Inversion")> MXV
-    <EnumMember(Value:="Malaysian Ringgit")> MYR
-    <EnumMember(Value:="Metical (Mosambique)")> MZM
-    <EnumMember(Value:="Metical (Mozambique)")> MZN
-    <EnumMember(Value:="Namibian Dollar")> NAD
-    <EnumMember(Value:="Naira (Nigeria)")> NGN
-    <EnumMember(Value:="Cordoba")> NIC
-    <EnumMember(Value:="Cordoba Oro")> NIO
-    <EnumMember(Value:="Netherlands Guilder")> NLG
-    <EnumMember(Value:="Norwegian Krone")> NOK
-    <EnumMember(Value:="Nepalese Rupee")> NPR
-    <EnumMember(Value:="New Zealand Dollar")> NZD
-    <EnumMember(Value:="Omani Rial")> OMR
-    <EnumMember(Value:="Balboa (Panama)")> PAB
-    <EnumMember(Value:="Sol")> PEN
-    <EnumMember(Value:="Sol")> PES
-    <EnumMember(Value:="Kina (Papua New Guinea)")> PGK
-    <EnumMember(Value:="Philippine Peso")> PHP
-    <EnumMember(Value:="Pakistan Rupee")> PKR
-    <EnumMember(Value:="Zloty (Poland)")> PLN
-    <EnumMember(Value:="Zloty")> PLZ
-    <EnumMember(Value:="Portugese Escudo")> PTE
-    <EnumMember(Value:="Guarani (Paraguay)")> PYG
-    <EnumMember(Value:="Qatari Rial")> QAR
-    <EnumMember(Value:="Old Leu (Romania)")> ROL
-    <EnumMember(Value:="New Leu (Romania)")> RON
-    <EnumMember(Value:="Serbian Dinar")> RSD
-    <EnumMember(Value:="Russian Ruble")> RUB
-    <EnumMember(Value:="Russian Ruble")> RUR
-    <EnumMember(Value:="Rwandan Franc")> RWF
-    <EnumMember(Value:="Saudi Riyal")> SAR
-    <EnumMember(Value:="Solomon Islands Dollar")> SBD
-    <EnumMember(Value:="Luigino")> SBL
-    <EnumMember(Value:="Seychelles Rupee")> SCR
-    <EnumMember(Value:="Sudanese Dinar")> SDD
-    <EnumMember(Value:="Sudanese Pound")> SDG
-    <EnumMember(Value:="Sudanese Pound")> SDP
-    <EnumMember(Value:="Swedish Krona")> SEK
-    <EnumMember(Value:="Singapore Dollar")> SGD
-    <EnumMember(Value:="Saint Helena Pound")> SHP
-    <EnumMember(Value:="Tolar (Slovenia)")> SIT
-    <EnumMember(Value:="Slovak Koruna")> SKK
-    <EnumMember(Value:="Leone (Sierra Leone)")> SLE
-    <EnumMember(Value:="Leone (Sierra Leone)")> SLL
-    <EnumMember(Value:="Somalian Shilling")> SOS
-    <EnumMember(Value:="Surinam Dollar")> SRD
-    <EnumMember(Value:="Suriname Guilder")> SRG
-    <EnumMember(Value:="South Sudanese Pound")> SSP
-    <EnumMember(Value:="Dobra (Sao Tome and Principa)")> STD
-    <EnumMember(Value:="Dobra")> STN
-    <EnumMember(Value:="Ruble")> SUR
-    <EnumMember(Value:="El Salvador Colon")> SVC
-    <EnumMember(Value:="Syrian Pound")> SYP
-    <EnumMember(Value:="Lilangeni (Swaziland)")> SZL
-    <EnumMember(Value:="Baht (Thailand)")> THB
-    <EnumMember(Value:="Tajik Ruble")> TJR
-    <EnumMember(Value:="Somoni (Tajikistan)")> TJS
-    <EnumMember(Value:="Manat (Turkmenistan)")> TMM
-    <EnumMember(Value:="Manat (Turkmenistan)")> TMT
-    <EnumMember(Value:="Tunisian Dinar")> TND
-    <EnumMember(Value:="Pa'anga (Tonga)")> TOP
-    <EnumMember(Value:="Timor Escudo")> TPE
-    <EnumMember(Value:="Old Turkish Lira")> TRL
-    <EnumMember(Value:="New Turkish Lira")> TRY
-    <EnumMember(Value:="Trinidad and Tobago Dollar")> TTD
-    <EnumMember(Value:="New Taiwan Dollar")> TWD
-    <EnumMember(Value:="Tanzanian Shilling")> TZS
-    <EnumMember(Value:="Hryvnia (Ukraine)")> UAH
-    <EnumMember(Value:="Uganda Shilling")> UGS
-    <EnumMember(Value:="Uganda Shilling")> UGX
-    <EnumMember(Value:="United States Dollar, next day")> USN
-    <EnumMember(Value:="US Dollar (same day)")> USS
-    <EnumMember(Value:="Uruguay Peso en Unidades Indexadas")> UYI
-    <EnumMember(Value:="Uruguayan Peso")> UYP
-    <EnumMember(Value:="Uruguayan Peso")> UYU
-    <EnumMember(Value:="Unidad Previsional")> UYW
-    <EnumMember(Value:="Som (Uzbekistan)")> UZS
-    <EnumMember(Value:="Bolivar (Venezuela)")> VEB
-    <EnumMember(Value:="Bolívar")> VEF
-    <EnumMember(Value:="Bolívar Soberano")> VES
-    <EnumMember(Value:="Dong (Vietnam)")> VND
-    <EnumMember(Value:="Vatu (Vanuatu)")> VUV
-    <EnumMember(Value:="Tala (Samoa)")> WST
-    <EnumMember(Value:="CFA Franc BEAC")> XAF
-    <EnumMember(Value:="Silver (in ounces)")> XAG
-    <EnumMember(Value:="Gold (in ounces)")> XAU
-    <EnumMember(Value:="European Composite Unit (EURCO)")> XBA
-    <EnumMember(Value:="European Monetary Unit (E.M.U. - 6)")> XBB
-    <EnumMember(Value:="European Unit of Account 9 (E.U.A. - 9)")> XBC
-    <EnumMember(Value:="European Unit of Account 17")> XBD
-    <EnumMember(Value:="Bitcoin")> XBT
-    <EnumMember(Value:="East Caribbean Dollar")> XCD
-    <EnumMember(Value:="Special Drawing Rights (IMF)")> XDR
-    <EnumMember(Value:="European Currency Unit")> XEU
-    <EnumMember(Value:="Gold-Franc (Special Settlement Currency)")> XFO
-    <EnumMember(Value:="UIC-Franc (Special Settlement Currency)")> XFU
-    <EnumMember(Value:="CFA Franc BCEAO")> XOF
-    <EnumMember(Value:="Palladium (in ounces)")> XPD
-    <EnumMember(Value:="CFP Franc (French Polynesia)")> XPF
-    <EnumMember(Value:="Platinum (in ounces)")> XPT
-    <EnumMember(Value:="SUCRE")> XSU
-    <EnumMember(Value:="No currency code")> XXX
-    <EnumMember(Value:="Yemeni Dinar")> YDD
-    <EnumMember(Value:="Yemeni Rial")> YER
-    <EnumMember(Value:="Yugoslavian Dinar")> YUD
-    <EnumMember(Value:="New Dinar")> YUM
-    <EnumMember(Value:="Yugoslav New Dinar")> YUN
-    <EnumMember(Value:="Rand (financial)")> ZAL
-    <EnumMember(Value:="Rand (Lesotho, Namibia, South Africa)")> ZAR
-    <EnumMember(Value:="Kwacha (Zambia)")> ZMK
-    <EnumMember(Value:="Kwacha (Zambia)")> ZMW
-    <EnumMember(Value:="Zimbabwe Dollar")> ZWD
-    <EnumMember(Value:="Zimbabwe Dollar")> ZWL
-    <EnumMember(Value:="Unknown")> ZZZ
+Public Enum ReportTypeCode
+    <EnumMember(Value:="Large Virtual Currency Transaction Report (LVCTR)")> LVCTR = 14
+    <EnumMember(Value:="Suspicious transaction report (STR)")> STR = 102
+    <EnumMember(Value:="Large cash transaction report (LCTR)")> LCTR = 106
+    <EnumMember(Value:="Casino disbursement report (CDR)")> CDR = 113
+    <EnumMember(Value:="Electronic funds transfer report (EFTR)")> EFTR = 145
+End Enum
+
+Public Enum SubmitTypeCode
+    <EnumMember(Value:="Submit")> Submit = 1
+    <EnumMember(Value:="Update")> Update = 2
+    <EnumMember(Value:="Delete")> Delete = 5
+End Enum
+
+Public Enum ActivitySectorCode
+    <EnumMember(Value:="Accountant")> Accountant = 1
+    <EnumMember(Value:="Bank")> Bank = 2
+    <EnumMember(Value:="Caisse populaire")> CaissePopulaire = 3
+    <EnumMember(Value:="Crown agent")> CrownAgent = 4
+    <EnumMember(Value:="Casino")> Casino = 5
+    <EnumMember(Value:="Co-op credit society")> CoopCreditSociety = 6
+    <EnumMember(Value:="Life insurance broker or agent")> LifeInsuranceBrokerOrAgent = 9
+    <EnumMember(Value:="Life insurance company")> LifeInsuranceCompany = 10
+    <EnumMember(Value:="Money services business")> MoneyServicesBusiness = 11
+    <EnumMember(Value:="Provincial savings office")> ProvincialSavingsOffice = 12
+    <EnumMember(Value:="Real estate")> RealEstate = 13
+    <EnumMember(Value:="Credit union")> CreditUnion = 14
+    <EnumMember(Value:="Securities dealer")> SecuritiesDealer = 15
+    <EnumMember(Value:="Trust and/or loan company")> TrustOrLoanCompany = 16
+    <EnumMember(Value:="British Columbia notary")> BCNotary = 17
+    <EnumMember(Value:="Dealer in precious metals and stones")> DealerInPreciousMetalsAndStones = 18
+    <EnumMember(Value:="Credit union central")> CreditUnionCentral = 19
+    <EnumMember(Value:="Financial services cooperative")> FinancialServicesCooperative = 20
+    <EnumMember(Value:="Foreign money services business")> ForeignMoneyServicesBusiness = 21
+End Enum
+
+Public Enum AggregationTypeCode
+    <EnumMember(Value:="Beneficiary")> Beneficiary = 1
+    <EnumMember(Value:="Conductor")> Conductor = 2
+    <EnumMember(Value:="On behalf of (i.e. 3rd party)")> OnBehalfOf = 3
+    <EnumMember(Value:="Not applicable")> NotApplicable = 4
+End Enum
+
+Public Enum EftrAggregationTypeCode
+    <EnumMember(Value:="Beneficiary")> Beneficiary = 1
+    <EnumMember(Value:="On behalf of (i.e. 3rd party)")> OnBehalfOf = 3
+    <EnumMember(Value:="Not applicable")> NotApplicable = 4
+    <EnumMember(Value:="Requester")> Requester = 5
+End Enum
+
+Public Enum CdrAggregationTypeCode
+    <EnumMember(Value:="Not applicable")> NotApplicable = 4
+    <EnumMember(Value:="Received by")> ReceivedBy = 6
+    <EnumMember(Value:="Received on behalf of")> ReceivedOnBehalfOf = 7
+    <EnumMember(Value:="Requested by")> RequestedBy = 8
+    <EnumMember(Value:="Requested on behalf of")> RequestedOnBehalfOf = 9
+End Enum
+
+Public Enum MinisterialDirectiveCode
+    <EnumMember(Value:="IR2020")> IR2020 = 1
+End Enum
+
+Public Enum StructureTypeCode
+    <EnumMember(Value:="Corporation")> Corporation = 1
+    <EnumMember(Value:="Entity other than a corporation or trust")> EntityOtherThanCorporationOrTrust = 2
+    <EnumMember(Value:="Trust")> Trust = 3
+    <EnumMember(Value:="Widely held or publicly traded trust")> PubliclyTradedTrust = 4
+End Enum
+
+Public Enum AccountTypeCode
+    <EnumMember(Value:="Personal")> Personal = 1
+    <EnumMember(Value:="Business")> Business = 2
+    <EnumMember(Value:="Trust")> Trust = 3
+    <EnumMember(Value:="Other")> Other = 4
+    <EnumMember(Value:="Casino")> Casino = 5
+End Enum
+
+Public Enum IncorporationRegistrationTypeCode
+    <EnumMember(Value:="Registered")> Registered = 1
+    <EnumMember(Value:="Incorporated")> Incorporated = 2
+    <EnumMember(Value:="Registered and incorporated")> RegisteredAndIncorporated = 4
+    <EnumMember(Value:="Unknown")> Unknown = 5
+End Enum
+
+Public Enum AddressTypeCode
+    <EnumMember(Value:="Structured address")> Structured = 1
+    <EnumMember(Value:="Unstructured address")> Unstructured = 2
+End Enum
+
+Public Enum DefinitionType12
+    <EnumMember(Value:="Person name")> PersonName = 1
+    <EnumMember(Value:="Entity name")> EntityName = 2
+End Enum
+
+Public Enum DefinitionType34
+    <EnumMember(Value:="Person details")> PersonDetails = 3
+    <EnumMember(Value:="Entity details")> EntityDetails = 4
+End Enum
+
+Public Enum DefinitionType56
+    <EnumMember(Value:="Person and employer Details")> PersonAndEmployerDetails = 5
+    <EnumMember(Value:="Entity and beneficial ownership details")> EntityAndBeneficialOwnershipDetails = 6
+End Enum
+
+Public Enum DefinitionType78
+    <EnumMember(Value:="Person name and address")> PersonNameAndAddress = 7
+    <EnumMember(Value:="Entity name and address")> EntityNameAndAddress = 8
+End Enum
+
+Public Enum DefinitionType01278
+    <EnumMember(Value:="Not applicable")> NotApplicable = 0
+    <EnumMember(Value:="Person name")> PersonName = 1
+    <EnumMember(Value:="Entity name")> EntityName = 2
+    <EnumMember(Value:="Person name and address")> PersonNameAndAddress = 7
+    <EnumMember(Value:="Entity name and address")> EntityNameAndAddress = 8
+End Enum
+
+Public Enum DefinitionType34910
+    <EnumMember(Value:="Person details")> PersonDetails = 3
+    <EnumMember(Value:="Entity details")> EntityDetails = 4
+    <EnumMember(Value:="Person basic details")> PersonBasicDetails = 9
+    <EnumMember(Value:="Entity basic details")> EntityBasicDetails = 10
+End Enum
+
+Public Enum AdditionalPaymentInformationTag
+    <EnumMember(Value:="Remittance Information")> RemittanceInformation = 1
+    <EnumMember(Value:="Instructed Amount")> InstructedAmount = 2
+    <EnumMember(Value:="Charges Information")> ChargesInformation = 3
+    <EnumMember(Value:="Payment Identification")> PaymentIdentification = 4
+    <EnumMember(Value:="Payment Type Information")> PaymentTypeInformation = 5
+    <EnumMember(Value:="Instruction For Creditor Agent")> InstructionForCreditorAgent = 6
+    <EnumMember(Value:="Instruction For Next Agent")> InstructionForNextAgent = 7
+    <EnumMember(Value:="Regulatory Reporting")> RegulatoryReporting = 8
+    <EnumMember(Value:="Supplementary Data")> SupplementaryData = 9
+    <EnumMember(Value:="Related Remittance Information")> RelatedRemittanceInformation = 10
+    <EnumMember(Value:="Purpose")> Purpose = 11
+End Enum
+
+Public Enum OnBehalfOfRelationshipType
+    <EnumMember(Value:="Accountant")> Accountant = 1
+    <EnumMember(Value:="Agent")> Agent = 2
+    <EnumMember(Value:="Borrower")> Borrower = 3
+    <EnumMember(Value:="Broker")> Broker = 4
+    <EnumMember(Value:="Customer")> Customer = 5
+    <EnumMember(Value:="Employee")> Employee = 6
+    <EnumMember(Value:="Friend")> Friend = 7
+    <EnumMember(Value:="Relative")> Relative = 8
+    <EnumMember(Value:="Other")> Other = 9
+    <EnumMember(Value:="Legal counsel")> LegalCounsel = 10
+    <EnumMember(Value:="Employer")> Employer = 11
+    <EnumMember(Value:="Joint/Secondary owner")> JointSecondaryOwner = 12
+    <EnumMember(Value:="Power of attorney")> PowerOfAttorney = 13
+    <EnumMember(Value:="Vendor/Supplier")> VendorSupplier = 14
+    <EnumMember(Value:="Authorized signatory")> AuthorizedSignatory = 16
+End Enum
+
+Public Enum InitiatorRelationshipType
+    <EnumMember(Value:="Other")> Other = 9
+    <EnumMember(Value:="Intermediary Institution")> IntermediaryInstitution = 17
+    <EnumMember(Value:="Sending institution")> SendingInstitution = 18
+    <EnumMember(Value:="Receiving institution")> ReceivingInstitution = 19
+    <EnumMember(Value:="Debtors agent")> DebtorsAgent = 20
+    <EnumMember(Value:="Creditors agent")> CreditorsAgent = 21
+    <EnumMember(Value:="Instructing agent")> InstructingAgent = 22
+    <EnumMember(Value:="Instructed agent")> InstructedAgent = 23
+    <EnumMember(Value:="Intermediary agent 1")> IntermediaryAgent1 = 24
+    <EnumMember(Value:="Intermediary agent 2")> IntermediaryAgent2 = 25
+    <EnumMember(Value:="Intermediary agent 3")> IntermediaryAgent3 = 26
+    <EnumMember(Value:="Previous instructing agent 1")> PreviousInstructingAgent1 = 27
+    <EnumMember(Value:="Previous instructing agent 2")> PreviousInstructingAgent2 = 28
+    <EnumMember(Value:="Previous instructing agent 3")> PreviousInstructingAgent3 = 29
+    <EnumMember(Value:="Ordering institution")> OrderingInstitution = 30
+    <EnumMember(Value:="Beneficiary institution")> BeneficiaryInstitution = 31
+End Enum
+
+Public Enum InvolvementRelationshipType
+    <EnumMember(Value:="Other")> Other = 9
+    <EnumMember(Value:="Sender's correspondent (MT-53a)")> SendersCorrespondent = 32
+    <EnumMember(Value:="Receiver's correspondent (MT-54a)")> ReceiversCorrespondent = 33
+    <EnumMember(Value:="Third reimbursement institution(MT-55a)")> ThirdReimbursementInstitution = 34
+    <EnumMember(Value:="Instructing reimbursement agent")> InstructingReimbursementAgent = 35
+    <EnumMember(Value:="Instructed reimbursement agent")> InstructedReimbursementAgent = 36
+    <EnumMember(Value:="Third reimbursement agent")> ThirdReimbursementAgent = 37
+    <EnumMember(Value:="Reimbursement agent 1")> ReimbursementAgent1 = 38
+    <EnumMember(Value:="Reimbursement agent 2")> ReimbursementAgent2 = 39
+    <EnumMember(Value:="Reimbursement agent 3")> ReimbursementAgent3 = 40
+End Enum
+
+Public Enum EftTypeCode
+    <EnumMember(Value:="Swift")> Swift = 1
+    <EnumMember(Value:="Non Swift")> NonSwift = 2
+End Enum
+
+Public Enum CanadianResidentStatus
+    <EnumMember(Value:="In Canada")> InCanada = 1
+    <EnumMember(Value:="Outside Canada")> OutsideCanada = 2
+    <EnumMember(Value:="Not applicable")> NotApplicable = 3
+End Enum
+
+Public Enum TypeOfDeviceCode
+    <EnumMember(Value:="Computer/Laptop")> ComputerLaptop = 1
+    <EnumMember(Value:="Mobile phone")> MobilePhone = 2
+    <EnumMember(Value:="Tablet")> Tablet = 3
+    <EnumMember(Value:="Other")> Other = 4
+End Enum
+
+Public Enum RelationshipOfConductorCode
+    <EnumMember(Value:="Accountant")> Accountant = 1
+    <EnumMember(Value:="Agent")> Agent = 2
+    <EnumMember(Value:="Borrower")> Borrower = 3
+    <EnumMember(Value:="Broker")> Broker = 4
+    <EnumMember(Value:="Customer")> Customer = 5
+    <EnumMember(Value:="Employee")> Employee = 6
+    <EnumMember(Value:="Friend")> Friend = 7
+    <EnumMember(Value:="Relative")> Relative = 8
+    <EnumMember(Value:="Other")> Other = 9
+    <EnumMember(Value:="Legal counsel")> LegalCounsel = 10
+    <EnumMember(Value:="Employer")> Employer = 11
+    <EnumMember(Value:="Joint/Secondary owner")> JointSecondaryOwner = 12
+    <EnumMember(Value:="Power of attorney")> PowerOfAttorney = 13
+End Enum
+
+Public Enum RelationshipOfConductorCodeWithVendor
+    <EnumMember(Value:="Accountant")> Accountant = 1
+    <EnumMember(Value:="Agent")> Agent = 2
+    <EnumMember(Value:="Borrower")> Borrower = 3
+    <EnumMember(Value:="Broker")> Broker = 4
+    <EnumMember(Value:="Customer")> Customer = 5
+    <EnumMember(Value:="Employee")> Employee = 6
+    <EnumMember(Value:="Friend")> Friend = 7
+    <EnumMember(Value:="Relative")> Relative = 8
+    <EnumMember(Value:="Other")> Other = 9
+    <EnumMember(Value:="Legal counsel")> LegalCounsel = 10
+    <EnumMember(Value:="Employer")> Employer = 11
+    <EnumMember(Value:="Joint/Secondary owner")> JointSecondaryOwner = 12
+    <EnumMember(Value:="Power of attorney")> PowerOfAttorney = 13
+    <EnumMember(Value:="Vendor/Supplier")> VendorSupplier = 14
+End Enum
+
+Public Enum RelationshipOfConductorCodeWithSelf
+    <EnumMember(Value:="Accountant")> Accountant = 1
+    <EnumMember(Value:="Agent")> Agent = 2
+    <EnumMember(Value:="Borrower")> Borrower = 3
+    <EnumMember(Value:="Broker")> Broker = 4
+    <EnumMember(Value:="Customer")> Customer = 5
+    <EnumMember(Value:="Employee")> Employee = 6
+    <EnumMember(Value:="Friend")> Friend = 7
+    <EnumMember(Value:="Relative")> Relative = 8
+    <EnumMember(Value:="Other")> Other = 9
+    <EnumMember(Value:="Legal counsel")> LegalCounsel = 10
+    <EnumMember(Value:="Employer")> Employer = 11
+    <EnumMember(Value:="Joint/Secondary owner")> JointSecondaryOwner = 12
+    <EnumMember(Value:="Power of attorney")> PowerOfAttorney = 13
+    <EnumMember(Value:="Vendor/Supplier")> VendorSupplier = 14
+    <EnumMember(Value:="Self")> Self = 15
+End Enum
+
+Public Enum AccountStatusAtTimeOfTransaction
+    <EnumMember(Value:="Active")> Active = 1
+    <EnumMember(Value:="Inactive")> Inactive = 2
+    <EnumMember(Value:="Dormant")> Dormant = 3
+    <EnumMember(Value:="Closed")> Closed = 4
 End Enum
