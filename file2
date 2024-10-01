@@ -1,29 +1,22 @@
--- Declare the table variable to hold the processed column names
-DECLARE @Columns NVARCHAR(MAX) = '';
+# PowerShell Script to Auto-generate a Format File for CSV
 
--- Add your raw header data (comma-separated values)
-DECLARE @Header NVARCHAR(MAX) = 'Column1/Column2 #Column3(Column4)';  -- Replace with your actual CSV header
+$csvFile = "C:\path\to\your\file.csv"
+$tableName = "YourTableName"
 
--- Replace spaces and special characters
-SET @Header = REPLACE(@Header, ' ', '_');
-SET @Header = REPLACE(@Header, '/', '_sl_');
-SET @Header = REPLACE(@Header, '#', '_sh_');
-SET @Header = REPLACE(@Header, '(', '_lp_');
-SET @Header = REPLACE(@Header, ')', '_rp_');
+# Read the header from the CSV file
+$header = (Get-Content $csvFile | Select-Object -First 1) -split ','
 
--- Split the columns by commas and build the CREATE TABLE script
-WITH SplitColumns AS (
-    SELECT value AS ColumnName, ROW_NUMBER() OVER(ORDER BY (SELECT NULL)) AS RowNum
-    FROM STRING_SPLIT(@Header, ',')
-)
-SELECT @Columns = @Columns + '[' + ColumnName + '] VARCHAR(100), '
-FROM SplitColumns;
+# Create the format file
+$formatFile = "C:\path\to\your\formatfile.fmt"
 
--- Remove the trailing comma
-SET @Columns = LEFT(@Columns, LEN(@Columns) - 1);
+# Write the SQL version and column count
+$columnsCount = $header.Count
+$fmtContent = "13.0`n$columnsCount`n"
 
--- Final CREATE TABLE script
-DECLARE @CreateTableScript NVARCHAR(MAX) = 'CREATE TABLE YourTableName (' + @Columns + ');';
+# Write the format for each column
+for ($i = 1; $i -le $columnsCount; $i++) {
+    $fmtContent += "$i SQLCHAR 0 100 `"," $i $($header[$i - 1]) SQL_Latin1_General_CP1_CI_AS`n"
+}
 
--- Output the final CREATE TABLE script
-PRINT @CreateTableScript;
+# Save the format file
+Set-Content -Path $formatFile -Value $fmtContent
