@@ -1,10 +1,1 @@
-SELECT 
-    YourDateColumn,
-    CASE 
-        WHEN MONTH(YourDateColumn) IN (1, 2, 3) THEN EOMONTH(DATEADD(MONTH, 2, YourDateColumn))       -- Q1 end (March 31)
-        WHEN MONTH(YourDateColumn) IN (4, 5, 6) THEN EOMONTH(DATEADD(MONTH, 5 - MONTH(YourDateColumn), YourDateColumn)) -- Q2 end (June 30)
-        WHEN MONTH(YourDateColumn) IN (7, 8, 9) THEN EOMONTH(DATEADD(MONTH, 8 - MONTH(YourDateColumn), YourDateColumn)) -- Q3 end (September 30)
-        WHEN MONTH(YourDateColumn) IN (10, 11, 12) THEN EOMONTH(DATEADD(MONTH, 11 - MONTH(YourDateColumn), YourDateColumn)) -- Q4 end (December 31)
-    END AS QuarterEndDate
-FROM 
-    YourTable;
+    EOMONTH(DATEADD(QUARTER, -1, DATEADD(MONTH, (DATEPART(QUARTER, YourDateColumn) - 1) * 3, DATEFROMPARTS(YEAR(YourDateColumn), 1, 1)))) AS PreviousQuarterEndDate
