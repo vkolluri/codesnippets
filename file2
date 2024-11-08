@@ -1,22 +1,10 @@
-# PowerShell Script to Auto-generate a Format File for CSV
-
-$csvFile = "C:\path\to\your\file.csv"
-$tableName = "YourTableName"
-
-# Read the header from the CSV file
-$header = (Get-Content $csvFile | Select-Object -First 1) -split ','
-
-# Create the format file
-$formatFile = "C:\path\to\your\formatfile.fmt"
-
-# Write the SQL version and column count
-$columnsCount = $header.Count
-$fmtContent = "13.0`n$columnsCount`n"
-
-# Write the format for each column
-for ($i = 1; $i -le $columnsCount; $i++) {
-    $fmtContent += "$i SQLCHAR 0 100 `"," $i $($header[$i - 1]) SQL_Latin1_General_CP1_CI_AS`n"
-}
-
-# Save the format file
-Set-Content -Path $formatFile -Value $fmtContent
+SELECT 
+    YourDateColumn,
+    CASE 
+        WHEN MONTH(YourDateColumn) IN (1, 2, 3) THEN EOMONTH(DATEADD(MONTH, 2, YourDateColumn))       -- Q1 end (March 31)
+        WHEN MONTH(YourDateColumn) IN (4, 5, 6) THEN EOMONTH(DATEADD(MONTH, 5 - MONTH(YourDateColumn), YourDateColumn)) -- Q2 end (June 30)
+        WHEN MONTH(YourDateColumn) IN (7, 8, 9) THEN EOMONTH(DATEADD(MONTH, 8 - MONTH(YourDateColumn), YourDateColumn)) -- Q3 end (September 30)
+        WHEN MONTH(YourDateColumn) IN (10, 11, 12) THEN EOMONTH(DATEADD(MONTH, 11 - MONTH(YourDateColumn), YourDateColumn)) -- Q4 end (December 31)
+    END AS QuarterEndDate
+FROM 
+    YourTable;
