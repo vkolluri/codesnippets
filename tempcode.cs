@@ -1,68 +1,82 @@
-/* General table styles */
-table {
-    width: 100%;
-    border-collapse: collapse;
-    box-sizing: border-box;
-    page-break-inside: avoid; /* Prevent tables from breaking across pages */
-}
+@media print {
+    /* General Page Setup */
+    body {
+        margin: 10mm; /* Adjust page margins */
+    }
 
-/* Table headers */
-table th {
-    background-color: #007bff; /* Bootstrap primary color */
-    color: white;
-    text-align: left;
-    padding: 10px;
-    border: 1px solid #dee2e6; /* Bootstrap table border color */
-}
+    /* Ensure tables fit within the A4 printable area */
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed; /* Ensures columns are sized properly */
+        page-break-inside: avoid; /* Prevent tables from breaking across pages */
+    }
 
-/* Table cells */
-table td {
-    padding: 10px;
-    border: 1px solid #dee2e6; /* Ensure borders are visible */
-    white-space: nowrap; /* Prevent text wrapping */
-    overflow: hidden; /* Ensure no content overlaps */
-    text-overflow: ellipsis; /* Add ellipsis for long text */
-}
+    /* Table headers */
+    table th {
+        background-color: #007bff; /* Bootstrap primary color */
+        color: white;
+        text-align: left;
+        padding: 8px;
+        border: 1px solid #dee2e6; /* Table border */
+        font-size: 0.9rem; /* Smaller text to fit content */
+        word-wrap: break-word; /* Allow headers to wrap text */
+    }
 
-/* Nested tables */
-table table {
-    margin: 0; /* Remove any additional margins for nested tables */
-    padding: 0;
-    width: 100%;
-    border: 1px solid #ced4da; /* Lighter border for nested tables */
-}
+    /* Table cells */
+    table td {
+        padding: 8px;
+        border: 1px solid #dee2e6;
+        font-size: 0.9rem; /* Smaller text */
+        word-wrap: break-word; /* Prevent content from overflowing cells */
+        overflow: hidden; /* Hide any overflowing content */
+        text-overflow: ellipsis; /* Optional: Add ellipsis for long text */
+    }
 
-table table th, table table td {
-    font-size: 0.9rem; /* Smaller font for nested tables */
-    padding: 8px; /* Slightly smaller padding */
-    border: 1px solid #dee2e6;
-}
+    /* Handle nested tables */
+    table table {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        border: 1px solid #ced4da;
+    }
 
-/* Responsive table */
-.table-responsive {
-    overflow-x: auto;
-    page-break-inside: avoid; /* Ensure responsive wrapper does not break pages */
-}
+    table table th, table table td {
+        font-size: 0.8rem; /* Reduce font size for nested tables */
+        padding: 6px;
+        border: 1px solid #dee2e6;
+        word-wrap: break-word; /* Ensure nested cells wrap text */
+    }
 
-/* Avoid page breaks inside rows */
-table tr {
-    page-break-inside: avoid; /* Prevent rows from breaking across pages */
-}
+    /* Responsive table wrapper */
+    .table-responsive {
+        overflow-x: auto;
+        page-break-inside: avoid;
+    }
 
-/* Avoid overlapping content */
-table td, table th {
-    vertical-align: top; /* Ensure proper alignment to prevent overlap */
-}
+    /* Prevent row breaking */
+    tr {
+        page-break-inside: avoid;
+    }
 
-/* Optional: Styling for table row headers */
-.table-header-row {
-    background-color: #6c757d; /* Secondary Bootstrap color */
-    color: white;
-    font-weight: bold;
-}
+    /* Optional: Footer/header to track page numbers */
+    @page {
+        size: A4;
+        margin: 10mm;
+    }
 
-/* Prevent nested table collapsing */
-.nested-table-wrapper {
-    padding: 10px;
-    box-sizing: border-box;
+    header, footer {
+        display: none;
+    }
+
+    /* Font scaling for large content */
+    body, td, th {
+        font-size: 12px; /* Adjust as needed */
+    }
+
+    /* Scale down content to fit within the page */
+    .content {
+        transform: scale(0.95); /* Slightly reduce the scale to fit more content */
+        transform-origin: top left;
+    }
 }
