@@ -1,3 +1,32 @@
+table {
+            width: 100%;
+            border-collapse: collapse;
+            page-break-inside: auto;
+            table-layout: fixed;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            page-break-inside: avoid;
+            word-wrap: break-word;
+        }
+        thead {
+            background-color: #f5f5f5;
+            page-break-before: auto;
+        }
+        table table {
+            margin: 10px 0;
+            border: 1px solid #000;
+        }
+        tr {
+            page-break-inside: avoid;
+        }
+        .page-break {
+            page-break-before: always;
+        }
+
+============================================
+
 @media print {
     /* General Page Setup */
     body {
